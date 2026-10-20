@@ -498,29 +498,47 @@ let cfg=JSON.parse(localStorage.getItem('tripcost_cfg')||'{}'),tab=0,chart=null,
 const T=()=>S.trips.find(t=>t.id==S.cur)||S.trips[0];
 
 /* ---------- 저장 & 동기화 (JSONBin) ---------- */
-let tm;function save(){S.ts=Date.now();localStorage.setItem('tripcost',JSON.stringify(S));clearTimeout(tm);tm=setTimeout(push,1200);render()}
+let tm;function save(){S.ts=Date.now();localStorage.setItem('tripcost',JSON.stringify(S));clearTimeout(tm);tm=setTimeout(sync,1200);render()}
 const saveCfg=()=>localStorage.setItem('tripcost_cfg',JSON.stringify(cfg));
 function setSt(s){st=s;const e=$('#stt');if(e)e.textContent=s}
+/* ============================================================
+   동기화 (JSONBin) — PC·폰·태블릿 어디서 입력해도 합쳐져요
+   · 여행/환전/지출을 항목(id) 단위로 합쳐요. 같은 항목을 양쪽에서 고치면 더 늦게 고친 쪽이 이겨요 (u = 수정 시각)
+   · 지운 항목은 지운 기록(del)을 남겨서 다른 기기에서도 같이 지워져요
+   · 저장 버튼 없이 입력할 때마다 자동 / 앱을 열 때·다시 돌아올 때도 자동
+============================================================ */
 const SURL='https://api.jsonbin.io/v3/b';
 const errHint=m=>/401|403/.test(m)?'API Key를 확인하세요 (Master Key)':/404/.test(m)?'Bin ID를 확인하세요':/fetch|network/i.test(m)?'인터넷 연결을 확인하세요':'';
-async function push(force){if(!cfg.key||(!force&&!S.trips.length&&!S.ts))return;setSt('업로드 중…');try{const H={'Content-Type':'application/json','X-Master-Key':cfg.key},b=JSON.stringify(S);let r;
-if(!cfg.bin){r=await fetch(SURL,{method:'POST',headers:{...H,'X-Bin-Private':'true','X-Bin-Name':'trip-cost'},body:b});if(!r.ok)throw new Error(r.status);cfg.bin=(await r.json()).metadata.id;saveCfg();const g=$('#g_b');if(g)g.value=cfg.bin}
-else{r=await fetch(SURL+'/'+cfg.bin,{method:'PUT',headers:H,body:b});if(!r.ok)throw new Error(r.status)}
-setSt('올림: 여행 '+S.trips.length+'개 · '+new Date().toLocaleTimeString('ko-KR'))}catch(e){setSt('업로드 실패 ('+e.message+') '+errHint(e.message))}}
-/* 불러오기: 서버가 더 최신이면 가져오고, 이 기기가 더 최신(데이터 있음)이면 올려요. force=true면 무조건 서버 데이터로 덮어써요 */
-async function pull(force){if(!cfg.key||!cfg.bin){setSt(cfg.key?'Bin ID를 입력해 주세요 (비워 두고 "이 기기 데이터 올리기"를 누르면 새로 만들어요)':'API Key를 입력해 주세요');return}
-setSt('불러오는 중…');try{const r=await fetch(SURL+'/'+cfg.bin+'/latest',{headers:{'X-Master-Key':cfg.key}});if(!r.ok)throw new Error(r.status);const d=(await r.json()).record,rn=d&&d.trips?d.trips.length:0;
-if(!rn&&!force){if(S.trips.length)push();else setSt('서버에 아직 데이터가 없어요');return}
-if(force||d.ts>S.ts){const cur=S.cur;S=d;if(S.trips.some(t=>t.id==cur))S.cur=cur;fixTrips();localStorage.setItem('tripcost',JSON.stringify(S));render();setSt('불러옴: 여행 '+rn+'개')}
-else if(S.ts>d.ts&&S.trips.length){push();setSt('이 기기 데이터가 더 최신이라 서버에 올렸어요 (서버 '+rn+'개 → 이 기기 '+S.trips.length+'개)')}
-else setSt('최신 상태 (여행 '+rn+'개)')}catch(e){setSt('불러오기 실패 ('+e.message+') '+errHint(e.message))}}
-function pullForce(){cfgSave();if(S.trips.length&&!confirm('서버 데이터로 이 기기 데이터를 덮어씁니다. 계속할까요?'))return;pull(true)}
-function pushForce(){cfgSave();if(!confirm('이 기기 데이터로 서버를 덮어씁니다. 계속할까요?'))return;S.ts=Date.now();localStorage.setItem('tripcost',JSON.stringify(S));push(true)}
+function tomb(id){(S.del=S.del||{})[id]=Date.now()}
+function mergeS(a,b){const del={};for(const k in(a.del||{}))del[k]=a.del[k];for(const k in(b.del||{}))del[k]=Math.max(del[k]||0,b.del[k]);
+const pick=(x,y)=>(x.u||0)>=(y.u||0)?x:y,alive=it=>!(it.id in del)||del[it.id]<(it.u||0);
+const ml=(l1,l2)=>{const m={};[...(l1||[]),...(l2||[])].forEach(it=>{m[it.id]=m[it.id]?pick(m[it.id],it):it});return Object.values(m).filter(alive).sort((p,q)=>(p.c||0)-(q.c||0)||String(p.id).localeCompare(String(q.id)))};
+const tm={};[...(a.trips||[]),...(b.trips||[])].forEach(t=>{const o=tm[t.id];if(!o){tm[t.id]=t;return}const w=pick(o,t);tm[t.id]={...w,exchanges:ml(o.exchanges,t.exchanges),expenses:ml(o.expenses,t.expenses)}});
+const trips=Object.values(tm).filter(alive).map(t=>({...t,exchanges:ml(t.exchanges,[]),expenses:ml(t.expenses,[])})).sort((p,q)=>String(p.id).localeCompare(String(q.id)));
+return{...a,trips,del,ts:Math.max(a.ts||0,b.ts||0)}}
+const norm=x=>JSON.stringify({trips:x.trips,del:x.del||{}},(k,v)=>v&&typeof v=='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((o,z)=>(o[z]=v[z],o),{}):v);
+let syncing=false,again=false,pend=false;
+async function sync(o){o=o||{};
+if(!cfg.key){setSt('API Key를 입력해 주세요');return}
+if(!cfg.bin&&!o.create){setSt('Bin ID를 입력해 주세요 (첫 기기라면 비워 두고 "지금 동기화")');return}
+if(syncing){again=true;return}
+const busy=()=>!o.sheet&&$('#sh').classList.contains('on');   // 입력창이 열려 있으면 닫힌 뒤에 동기화
+if(busy()){pend=true;return}
+syncing=true;setSt('동기화 중…');
+try{const H={'Content-Type':'application/json','X-Master-Key':cfg.key};
+if(!cfg.bin){const r=await fetch(SURL,{method:'POST',headers:{...H,'X-Bin-Private':'true','X-Bin-Name':'trip-cost'},body:JSON.stringify(S)});if(!r.ok)throw new Error(r.status);cfg.bin=(await r.json()).metadata.id;saveCfg();const g=$('#g_b');if(g)g.value=cfg.bin;setSt('새 Bin을 만들었어요. 다른 기기에는 이 Bin ID를 입력하세요: '+cfg.bin);return}
+const r=await fetch(SURL+'/'+cfg.bin+'/latest',{headers:{'X-Master-Key':cfg.key}});if(!r.ok)throw new Error(r.status);
+const d=(await r.json()).record||{};
+if(busy()){pend=true;return}
+const m=mergeS(S,d.trips?d:{trips:[]}),ch=norm(m)!==norm(S);S=m;fixTrips();localStorage.setItem('tripcost',JSON.stringify(S));if(ch)render();
+if(norm(S)!==norm(d)){const w=await fetch(SURL+'/'+cfg.bin,{method:'PUT',headers:H,body:JSON.stringify(S)});if(!w.ok)throw new Error(w.status)}
+setSt('동기화됨 · 여행 '+S.trips.length+'개 · '+new Date().toLocaleTimeString('ko-KR'))
+}catch(e){setSt('동기화 실패 ('+e.message+') '+errHint(e.message))}finally{syncing=false;if(again){again=false;setTimeout(sync,300)}}}
 
 /* ---------- 시트(팝업 폼) ---------- */
 let okFn=null,delFn=null;
 function openSheet(title,body,ok,del){okFn=ok;delFn=del;$('#bx').innerHTML=`<h3>${title}</h3>${body}<div class=btns>${del?'<button class=del onclick="delFn();closeSheet()">삭제</button>':''}<button onclick=closeSheet()>취소</button><button class=ok onclick="if(okFn()!==false)closeSheet()">저장</button></div>`;$('#sh').classList.add('on');history.pushState({v:'sheet'},'')}
-function closeSheet(){$('#sh').classList.remove('on');if(history.state&&history.state.v=='sheet')history.back()}
+function closeSheet(){$('#sh').classList.remove('on');if(history.state&&history.state.v=='sheet')history.back();if(pend){pend=false;setTimeout(sync,400)}}
 $('#sh').addEventListener('click',e=>{if(e.target.id=='sh')closeSheet()});
 function curSel(id,v,cb){const c=CURS.includes(v);return `<label>통화<select id=${id} onchange="curChg('${id}');${cb||''}">${CURS.map(x=>`<option value=${x} ${x==v?'selected':''}>${CNAME[x]} ${x}</option>`).join('')}<option value=__ ${c?'':'selected'}>직접 입력</option></select><input id=${id}_o placeholder="예: CAD" style="display:${c?'none':'block'}" value="${c?'':esc(v)}" oninput="${cb||''}"></label>`}
 const curChg=id=>$('#'+id+'_o').style.display=val(id)=='__'?'block':'none';
@@ -540,7 +558,7 @@ function timeVal(id){const g=k=>$('#'+id+' [data-k='+k+']').value,h=g('h'),n=g('
 const CCUR={JPN:'JPY',CHN:'CNY',TWN:'TWD',HKG:'HKD',MAC:'MOP',VNM:'VND',THA:'THB',SGP:'SGD',MYS:'MYR',IDN:'IDR',PHL:'PHP',KHM:'KHR',LAO:'LAK',MMR:'MMK',IND:'INR',NPL:'NPR',LKA:'LKR',MDV:'MVR',ARE:'AED',QAT:'QAR',SAU:'SAR',TUR:'TRY',ISR:'ILS',JOR:'JOD',KAZ:'KZT',MNG:'MNT',GBR:'GBP',FRA:'EUR',DEU:'EUR',ITA:'EUR',ESP:'EUR',PRT:'EUR',NLD:'EUR',BEL:'EUR',AUT:'EUR',GRC:'EUR',HRV:'EUR',IRL:'EUR',FIN:'EUR',SVN:'EUR',CHE:'CHF',CZE:'CZK',POL:'PLN',HUN:'HUF',DNK:'DKK',SWE:'SEK',NOR:'NOK',ISL:'ISK',RUS:'RUB',ROU:'RON',USA:'USD',CAN:'CAD',MEX:'MXN',CUB:'CUP',DOM:'DOP',BRA:'BRL',ARG:'ARS',CHL:'CLP',PER:'PEN',COL:'COP',EGY:'EGP',MAR:'MAD',ZAF:'ZAR',KEN:'KES',TZA:'TZS',AUS:'AUD',NZL:'NZD',FJI:'FJD',PYF:'XPF'};
 function setCur(id,c){const s=$('#'+id);if(CURS.includes(c))s.value=c;else{s.value='__';$('#'+id+'_o').value=c}curChg(id)}
 function cLink(){const c=CCUR[val('t_c')];if(c)setCur('t_cur',c)}
-function fixTrips(){S.trips.forEach(t=>{if(!t.city)t.city=t.name||'여행';if(t.dCity==null)t.dCity='';if(!t.countryCode)t.countryCode='';if(!t.cur)t.cur=CCUR[t.countryCode]||''})}
+function fixTrips(){if(!S.del)S.del={};S.trips.forEach(t=>{(t.exchanges||[]).forEach((x,i)=>{if(!x.c)x.c=i+1});(t.expenses||[]).forEach((x,i)=>{if(!x.c)x.c=i+1});if(!t.city)t.city=t.name||'여행';if(t.dCity==null)t.dCity='';if(!t.countryCode)t.countryCode='';if(!t.cur)t.cur=CCUR[t.countryCode]||''})}
 function openTrip(id){S.cur=id;view='detail';tab=0;history.pushState({v:'detail'},'');render();scrollTo(0,0)}
 function goList(){if(history.state&&history.state.v=='detail')history.back();else{view='list';render();scrollTo(0,0)}}
 function tripForm(id){const t=S.trips.find(x=>x.id==id)||{countryCode:'',city:'',dCity:'',start:today(),end:today(),people:['나'],rateMode:'fifo'};
@@ -553,8 +571,8 @@ ${curSel('t_cur',t.cur||'USD')}
 <label>동행자 (쉼표로 구분, me는 자동 포함)<input id=t_p value="${esc(t.people.map(dn).join(', '))}"></label>`,()=>{
 const c=val('t_c'),n=val('t_n').trim(),d=val('t_d').trim(),s=dateVal('t_s'),e=dateVal('t_e'),p=[...new Set(val('t_p').split(',').map(z=>{z=z.trim();return/^me$/i.test(z)?'나':z}).filter(Boolean))];if(!p.includes('나'))p.unshift('나');
 if(!c||!n||!s||!e){alert('나라, 도시, 날짜를 입력해 주세요');return false}
-if(id)Object.assign(t,{countryCode:c,city:n,dCity:d,start:s,end:e,people:p,rateMode:val('t_m'),cur:getCur('t_cur')});else S.trips.push({id:uid(),countryCode:c,city:n,dCity:d,start:s,end:e,people:p,rateMode:val('t_m'),cur:getCur('t_cur'),exchanges:[],expenses:[]});save()},
-id&&(()=>{if(confirm('이 여행의 모든 기록이 삭제됩니다. 계속할까요?')){S.trips=S.trips.filter(x=>x.id!=id);S.cur=null;view='list';save()}}))}
+if(id)Object.assign(t,{countryCode:c,city:n,dCity:d,start:s,end:e,people:p,rateMode:val('t_m'),cur:getCur('t_cur'),u:Date.now()});else S.trips.push({id:uid(),countryCode:c,city:n,dCity:d,start:s,end:e,people:p,rateMode:val('t_m'),cur:getCur('t_cur'),u:Date.now(),exchanges:[],expenses:[]});save()},
+id&&(()=>{if(confirm('이 여행의 모든 기록이 삭제됩니다. 계속할까요?')){tomb(id);S.trips=S.trips.filter(x=>x.id!=id);S.cur=null;view='list';save()}}))}
 
 /* ---------- 환전 ---------- */
 function exPrev(){const k=+val('f_k'),f=+val('f_f'),c=getCur('f_c');$('#f_r').textContent=k&&f?'환율 '+rs(c,k/f):''}
@@ -565,7 +583,7 @@ openSheet(id?'환전 수정':'환전 추가',`<label>날짜${dateIn('f_d',e.date
 <label>받은 외화<input id=f_f type=number inputmode=decimal value="${e.fx}" oninput=exPrev()></label><div class=hint id=f_r></div>`,()=>{
 const o={id:e.id||uid(),date:dateVal('f_d'),time:timeVal('f_t'),cur:getCur('f_c'),krw:+val('f_k'),fx:+val('f_f')};if(o.time===null){alert('시간을 확인해 주세요 (00~23시, 00~59분)');return false}
 if(!o.date||!o.cur||!o.krw||!o.fx){alert('모두 입력해 주세요');return false}
-if(id)Object.assign(e,o);else t.exchanges.push(o);save()},id&&(()=>{t.exchanges=t.exchanges.filter(x=>x.id!=id);save()}));exPrev()}
+o.u=Date.now();if(id)Object.assign(e,o);else{o.c=Date.now();t.exchanges.push(o)}save()},id&&(()=>{tomb(id);t.exchanges=t.exchanges.filter(x=>x.id!=id);save()}));exPrev()}
 
 /* ---------- 지출 ---------- */
 const dn=p=>p=='나'?'me':p;   // 화면에는 '나' 대신 'me'로 표시 (저장값은 '나')
@@ -603,13 +621,13 @@ const o=xRead(x.id||uid());if(o.time===null){alert('시간을 확인해 주세�
 if(!o.date||!o.amt||!o.cur){alert('날짜와 금액을 입력해 주세요');return false}
 if(o.pay=='other'&&!o.payer){alert('동행자를 먼저 추가해 주세요 (여행 ✎ 수정)');return false}
 if(o.pay!='atm'&&!(o.pay=='other'&&o.os=='done')&&!o.split.length){alert('더치페이할 사람을 선택해 주세요');return false}
-if(id)Object.assign(x,o);else t.expenses.push(o);save()},id&&(()=>{t.expenses=t.expenses.filter(y=>y.id!=id);save()}));xUi();cuUi()}
+o.u=Date.now();if(id)Object.assign(x,o);else{o.c=Date.now();t.expenses.push(o)}save()},id&&(()=>{tomb(id);t.expenses=t.expenses.filter(y=>y.id!=id);save()}));xUi();cuUi()}
 
 /* ---------- 설정 ---------- */
-function cfgForm(){openSheet('⚙ 동기화 설정',`<label>API Key (X-Master-Key)<input id=g_k value="${esc(cfg.key||'')}" autocomplete=off></label>
-<label>Bin ID (비우면 새로 생성)<input id=g_b value="${esc(cfg.bin||'')}" autocomplete=off></label><div class=hint id=stt>${esc(st)}</div>
-<div class=sub>이 기기: 여행 ${S.trips.length}개 · 다른 기기 데이터를 가져오려면 "서버에서 불러오기"를 누르세요</div>
-<div class=btns><button onclick="pullForce()">서버에서 불러오기</button><button onclick="pushForce()">이 기기 데이터 올리기</button></div>`,()=>{cfgSave();pull()})}
+function cfgForm(){openSheet('⚙ 동기화 설정',`<label>API Key (X-Master-Key)<input id=g_k value="${esc(cfg.key||'')}" autocomplete=off onchange="cfgSave();sync({sheet:true})"></label>
+<label>Bin ID (첫 기기만 비워 두면 새로 생성)<input id=g_b value="${esc(cfg.bin||'')}" autocomplete=off onchange="cfgSave();sync({sheet:true})"></label><div class=hint id=stt>${esc(st)}</div>
+<div class=sub>이 기기: 여행 ${S.trips.length}개 · Key와 Bin ID는 기기마다 처음 한 번만 입력하면 기억돼요. 입력한 내용은 저장 버튼 없이 자동으로 동기화돼요.</div>
+<div class=btns><button onclick="cfgSave();sync({create:true,sheet:true})">지금 동기화</button></div>`,()=>{cfgSave();sync({create:true,sheet:true})})}
 function cfgSave(){cfg.key=val('g_k').trim();cfg.bin=val('g_b').trim();saveCfg()}
 
 /* ---------- 화면 ---------- */
@@ -652,6 +670,6 @@ return `<div class=card><h3>송금 안내</h3>${s.tr.length?s.tr.map(a=>`<div cl
 fixTrips();$('#syncBtn').onclick=cfgForm;
 history.replaceState({v:'list'},'');
 addEventListener('popstate',e=>{const pv=view;$('#sh').classList.remove('on');view=e.state&&e.state.v=='detail'?'detail':'list';render();if(pv!=view)scrollTo(0,0)});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#sh').classList.contains('on'))pull()});
-render();pull();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});addEventListener('online',()=>sync());
+render();sync();
 </script></body></html>
