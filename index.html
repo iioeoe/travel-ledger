@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FAF6EF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>여행 경비 정산</title>
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* ★★★ 화면 축소 비율 (폴드 펼침 같은 넓은 터치 화면에서만 적용). 1이면 축소 안 함 ★★★ */
+const UI_SCALE=0.88;
+if('ontouchstart' in window&&screen.width>=768)document.querySelector('meta[name=viewport]').content='width='+Math.round(screen.width/UI_SCALE)+',initial-scale=1';
+</script>
+<style>
+/* ╔══════════════════════════════════════════════╗
+   ║  ★★★ 여기 변수만 고치면 모양이 바뀝니다 ★★★  ║
+   ╚══════════════════════════════════════════════╝ */
+:root{
+/* 색 */
+--bg:#FAF6EF;--ink:#1B2A4A;--ink2:#5B6B85;--ink3:#93A0B5;--line:#E7DFCE;--pink:#FF6FB7;--gold:#C9A227;--card:#FFFFFF;
+/* 글꼴 */
+--f-body:'Pretendard',sans-serif;--f-title:'Jua',sans-serif;--f-hand:'Gaegu',cursive;--f-num:'Space Mono',monospace;
+/* 글씨 크기 */
+--fs-body:15px;--fs-small:12px;--fs-title:22px;--fs-big:30px;--fs-num:16px;
+/* 카드/여백 */
+--radius:18px;--pad:16px;--gap:12px;--shadow:0 2px 10px rgba(27,42,74,.08);
+/* 탭바 · + 버튼 */
+--tab-h:60px;--side-w:92px;--fab:56px;--fab-right:18px;--fab-bottom:16px;
+}
+/* ───────── 아래는 일반 스타일 ───────── */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-body)/1.45 var(--f-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:8px;align-items:center;padding:12px var(--pad);border-bottom:1px solid var(--line)}
+header select{flex:1;min-width:0;font:var(--fs-title)/1.2 var(--f-title);background:none;border:0;appearance:none;padding:4px 0;text-overflow:ellipsis}
+.ib{background:var(--card);border:1px solid var(--line);border-radius:12px;width:38px;height:38px;font-size:18px;cursor:pointer}
+main{padding:var(--pad);padding-bottom:calc(var(--tab-h) + 90px);max-width:760px;margin:0 auto}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--pad);margin-bottom:var(--gap)}
+.card h3{margin:0 0 8px;font:var(--fs-title)/1.2 var(--f-title)}
+.big{font:700 var(--fs-big)/1.2 var(--f-num)}
+.num{font-family:var(--f-num);font-size:var(--fs-num)}
+.hand{font-family:var(--f-hand);font-size:18px;color:var(--ink2)}
+.sub{color:var(--ink2);font-size:var(--fs-small)}.gold{color:var(--gold)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.row:last-child{border:0}.row>div:first-child{min-width:0}.r{text-align:right}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);color:var(--ink2);margin-right:6px}
+.pos{color:#2E8B57}.neg{color:#D0436A}
+.empty{text-align:center;color:var(--ink3);padding:40px 0;font-family:var(--f-hand);font-size:20px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+nav{position:fixed;left:0;right:0;bottom:0;height:var(--tab-h);background:var(--card);border-top:1px solid var(--line);display:flex;z-index:6;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;color:var(--ink3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;cursor:pointer}
+nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav button span{padding-bottom:2px;border-bottom:3px solid transparent}
+nav button.on{color:var(--ink)}nav button.on span{border-bottom-color:var(--pink)}
+.fab{position:fixed;right:var(--fab-right);bottom:calc(var(--tab-h) + var(--fab-bottom));width:var(--fab);height:var(--fab);border-radius:50%;border:0;background:var(--pink);color:#fff;font-size:32px;line-height:1;box-shadow:0 4px 14px rgba(255,111,183,.5);cursor:pointer;z-index:6}
+@media(min-width:768px){
+ nav{top:0;right:auto;width:var(--side-w);height:auto;flex-direction:column;justify-content:flex-start;gap:6px;padding-top:24px;border-top:0;border-right:1px solid var(--line)}
+ nav button{flex:none;padding:14px 0}
+ header,main{margin-left:var(--side-w)}main{margin:0 auto 0 calc(var(--side-w) + 24px);padding-bottom:100px}
+ .fab{bottom:var(--fab-bottom)}
+}
+#sh{position:fixed;inset:0;background:rgba(27,42,74,.4);z-index:20;display:none;align-items:flex-end;justify-content:center}
+#sh.on{display:flex}
+.box{background:var(--bg);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px var(--pad) 24px}
+.box h3{margin:0 0 12px;font:var(--fs-title) var(--f-title)}
+.box label{display:block;font-size:13px;color:var(--ink2);margin-bottom:10px}
+.box input:not([type=checkbox]),.box select{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px}
+.chk{display:inline-block!important;margin:0 8px 8px 0!important;padding:6px 12px;background:#fff;border:1px solid var(--line);border-radius:99px;color:var(--ink)!important}
+.chk input{margin-right:4px}
+.btns{display:flex;gap:8px;margin-top:14px}
+.btns button{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
+.btns .ok{background:var(--pink);border-color:var(--pink);color:#fff}.btns .del{color:#D0436A;flex:0 0 80px}
+.hint{font-size:13px;color:var(--gold);min-height:18px;margin-bottom:6px}
+</style></head>
+<body>
+<header id="hd"></header><main id="mn"></main><nav id="nv"></nav><div id="fb"></div><div id="sh"><div class="box" id="bx"></div></div>
+<script>
+/* ============ 계산 로직 (CALC-START) ============ */
+const BIG=['JPY','VND'];            // 100단위당 환율로 보여줄 통화
+const CATS=['항공','숙박','식비','교통','쇼핑','입장료','기타'];
+const CURS=['USD','JPY','EUR','CNY','THB','VND','TWD','HKD','SGD','GBP','AUD'];
+// 통화별 평균 환율(1단위당 원) = 환전 원화 합계 ÷ 받은 외화 합계
+function avgRate(t,c){let k=0,f=0;t.exchanges.forEach(e=>{if(e.cur==c){k+=+e.krw;f+=+e.fx}});return f?k/f:0}
+// 지출의 원화 금액: 원화=그대로 / 카드=청구액 / 현금 외화=금액×(직접 환율 또는 평균 환율)
+function expKrw(t,x){if(x.pay=='krw'||x.cur=='KRW')return +x.amt;if(x.pay=='card')return +x.krw||0;return x.amt*(x.rate||avgRate(t,x.cur))}
+// 사람별 부담액 (균등, 마지막 사람이 나머지 흡수 / 직접 입력이면 그대로)
+function shares(t,x,k){if(x.custom)return{...x.custom};const s=x.split&&x.split.length?x.split:[x.payer],n=s.length,r={};let a=0;s.forEach((p,i)=>{const v=i<n-1?Math.round(k/n):k-a;r[p]=v;a+=v});return r}
+// 남은 외화 = 환전한 외화 − 현금 외화 지출
+function remain(t){const r={};t.exchanges.forEach(e=>r[e.cur]=(r[e.cur]||0)+ +e.fx);t.expenses.forEach(x=>{if(x.pay=='cash')r[x.cur]=(r[x.cur]||0)-x.amt});return r}
+// 정산: 잔액 = 낸 금액 − 부담액, 큰 채권자↔큰 채무자 순으로 맞춰 송금 횟수 최소화
+function settle(t){const paid={},owed={};t.people.forEach(p=>paid[p]=owed[p]=0);
+t.expenses.forEach(x=>{const k=Math.round(expKrw(t,x)),sh=shares(t,x,k);paid[x.payer]=(paid[x.payer]||0)+k;for(const p in sh)owed[p]=(owed[p]||0)+sh[p]});
+const bal={};[...new Set([...Object.keys(paid),...Object.keys(owed)])].forEach(p=>bal[p]=Math.round((paid[p]||0)-(owed[p]||0)));
+const cr=[],db=[];for(const p in bal){if(bal[p]>0)cr.push([p,bal[p]]);else if(bal[p]<0)db.push([p,-bal[p]])}
+cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);const tr=[];let i=0,j=0;
+while(i<cr.length&&j<db.length){const m=Math.min(cr[i][1],db[j][1]);if(m>0)tr.push({from:db[j][0],to:cr[i][0],amt:m});cr[i][1]-=m;db[j][1]-=m;if(!cr[i][1])i++;if(!db[j][1])j++}
+return{bal,paid,owed,tr}}
+/* ============ (CALC-END) ============ */
+
+const $=s=>document.querySelector(s),val=id=>$('#'+id).value;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const won=n=>(n<0?'-':'')+'₩'+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+const num=n=>(+n).toLocaleString('ko-KR',{maximumFractionDigits:2});
+const rs=(c,r)=>BIG.includes(c)?'100'+c+' = ₩'+num(r*100):'1'+c+' = ₩'+num(r);
+const uid=()=>Math.random().toString(36).slice(2,9),today=()=>new Date().toISOString().slice(0,10);
+let S=(()=>{try{const d=JSON.parse(localStorage.getItem('tripcost'));if(d&&d.trips)return d}catch(e){}return{ts:0,cur:null,trips:[]}})();
+let cfg=JSON.parse(localStorage.getItem('tripcost_cfg')||'{}'),tab=0,chart=null,st='';
+const T=()=>S.trips.find(t=>t.id==S.cur)||S.trips[0];
+
+/* ---------- 저장 & 동기화 (JSONBin) ---------- */
+let tm;function save(){S.ts=Date.now();localStorage.setItem('tripcost',JSON.stringify(S));clearTimeout(tm);tm=setTimeout(push,1200);render()}
+const saveCfg=()=>localStorage.setItem('tripcost_cfg',JSON.stringify(cfg));
+function setSt(s){st=s;const e=$('#stt');if(e)e.textContent=s}
+async function push(){if(!cfg.key)return;setSt('업로드 중…');try{const H={'Content-Type':'application/json','X-Master-Key':cfg.key},b=JSON.stringify(S);let r;
+if(!cfg.bin){r=await fetch('https://api.jsonbin.io/v3/b',{method:'POST',headers:{...H,'X-Bin-Private':'true','X-Bin-Name':'trip-cost'},body:b});if(!r.ok)throw 0;cfg.bin=(await r.json()).metadata.id;saveCfg()}
+else{r=await fetch('https://api.jsonbin.io/v3/b/'+cfg.bin,{method:'PUT',headers:H,body:b});if(!r.ok)throw 0}
+setSt('동기화됨 '+new Date().toLocaleTimeString('ko-KR'))}catch(e){setSt('동기화 실패 (Key/Bin ID 확인)')}}
+async function pull(){if(!cfg.key||!cfg.bin)return;setSt('불러오는 중…');try{const r=await fetch('https://api.jsonbin.io/v3/b/'+cfg.bin+'/latest',{headers:{'X-Master-Key':cfg.key}});if(!r.ok)throw 0;const d=(await r.json()).record;
+if(d&&d.trips&&d.ts>S.ts){S=d;localStorage.setItem('tripcost',JSON.stringify(S));render();setSt('불러옴')}else if(S.ts>(d&&d.ts||0))push();else setSt('최신 상태')}catch(e){setSt('불러오기 실패')}}
+
+/* ---------- 시트(팝업 폼) ---------- */
+let okFn=null,delFn=null;
+function openSheet(title,body,ok,del){okFn=ok;delFn=del;$('#bx').innerHTML=`<h3>${title}</h3>${body}<div class=btns>${del?'<button class=del onclick="delFn();closeSheet()">삭제</button>':''}<button onclick=closeSheet()>취소</button><button class=ok onclick="if(okFn()!==false)closeSheet()">저장</button></div>`;$('#sh').classList.add('on')}
+function closeSheet(){$('#sh').classList.remove('on')}
+$('#sh').addEventListener('click',e=>{if(e.target.id=='sh')closeSheet()});
+function curSel(id,v,cb){const c=CURS.includes(v);return `<label>통화<select id=${id} onchange="curChg('${id}');${cb||''}">${CURS.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}<option value=__ ${c?'':'selected'}>직접 입력</option></select><input id=${id}_o placeholder="예: CAD" style="display:${c?'none':'block'}" value="${c?'':esc(v)}" oninput="${cb||''}"></label>`}
+const curChg=id=>$('#'+id+'_o').style.display=val(id)=='__'?'block':'none';
+const getCur=id=>val(id)=='__'?val(id+'_o').trim().toUpperCase():val(id);
+
+/* ---------- 여행 ---------- */
+function tripChg(v){if(v=='__new')tripForm();else{S.cur=v;save()}}
+function tripForm(id){const t=S.trips.find(x=>x.id==id)||{name:'',start:today(),end:today(),people:['나']};
+openSheet(id?'여행 수정':'새 여행',`<label>여행 이름<input id=t_n value="${esc(t.name)}" placeholder="예: 오사카 3박4일"></label>
+<label>시작일<input id=t_s type=date value="${t.start}"></label><label>종료일<input id=t_e type=date value="${t.end}"></label>
+<label>동행자 (쉼표로 구분, 나 포함)<input id=t_p value="${esc(t.people.join(', '))}"></label>`,()=>{
+const n=val('t_n').trim(),p=[...new Set(val('t_p').split(',').map(s=>s.trim()).filter(Boolean))];if(!n||!p.length){alert('이름과 동행자를 입력해 주세요');return false}
+if(id){Object.assign(t,{name:n,start:val('t_s'),end:val('t_e'),people:p})}else{const nt={id:uid(),name:n,start:val('t_s'),end:val('t_e'),people:p,exchanges:[],expenses:[]};S.trips.push(nt);S.cur=nt.id}save()},
+id&&(()=>{if(confirm('이 여행의 모든 기록이 삭제됩니다. 계속할까요?')){S.trips=S.trips.filter(x=>x.id!=id);S.cur=null;save()}}))}
+
+/* ---------- 환전 ---------- */
+function exPrev(){const k=+val('f_k'),f=+val('f_f'),c=getCur('f_c');$('#f_r').textContent=k&&f?'환율 '+rs(c,k/f):''}
+function exForm(id){const t=T(),e=t.exchanges.find(x=>x.id==id)||{date:today(),cur:'USD',krw:'',fx:''};
+openSheet(id?'환전 수정':'환전 추가',`<label>날짜<input id=f_d type=date value="${e.date}"></label>${curSel('f_c',e.cur,'exPrev()')}
+<label>낸 원화<input id=f_k type=number inputmode=decimal value="${e.krw}" oninput=exPrev()></label>
+<label>받은 외화<input id=f_f type=number inputmode=decimal value="${e.fx}" oninput=exPrev()></label><div class=hint id=f_r></div>`,()=>{
+const o={id:e.id||uid(),date:val('f_d'),cur:getCur('f_c'),krw:+val('f_k'),fx:+val('f_f')};if(!o.cur||!o.krw||!o.fx){alert('모두 입력해 주세요');return false}
+if(id)Object.assign(e,o);else t.exchanges.push(o);save()},id&&(()=>{t.exchanges=t.exchanges.filter(x=>x.id!=id);save()}));exPrev()}
+
+/* ---------- 지출 ---------- */
+function exUi(){const p=val('f_pay'),c=getCur('f_c');$('#r_cur').style.display=p=='krw'?'none':'block';$('#r_krw').style.display=p=='card'?'block':'none';$('#r_rt').style.display=p=='cash'?'block':'none';
+$('#l_amt').firstChild.textContent=p=='krw'?'금액 (원)':'금액 (외화)';const a=avgRate(T(),c);$('#f_rt').placeholder=a?'비우면 평균 '+num(BIG.includes(c)?a*100:a):'평균 환율 없음 - 직접 입력';$('#l_rt').firstChild.textContent=BIG.includes(c)?'환율 (100'+c+'당 원)':'환율 (1'+c+'당 원)'}
+function cuUi(){$('#cu').style.display=$('#f_cu').checked?'block':'none'}
+function xForm(id){const t=T(),x=t.expenses.find(y=>y.id==id)||{date:today(),cat:'식비',memo:'',pay:'cash',cur:'USD',amt:'',krw:'',rate:'',payer:t.people[0],split:[...t.people],custom:null};
+const sp=x.split||[],r=x.rate?(BIG.includes(x.cur)?x.rate*100:x.rate):'';
+openSheet(id?'지출 수정':'지출 추가',`<label>날짜<input id=f_d type=date value="${x.date}"></label>
+<label>분류<select id=f_cat>${CATS.map(c=>`<option ${c==x.cat?'selected':''}>${c}</option>`).join('')}</select></label>
+<label>내용<input id=f_m value="${esc(x.memo)}" placeholder="예: 라멘"></label>
+<label>결제수단<select id=f_pay onchange=exUi()>${[['cash','현금'],['card','카드'],['krw','원화']].map(a=>`<option value=${a[0]} ${a[0]==x.pay?'selected':''}>${a[1]}</option>`).join('')}</select></label>
+<div id=r_cur>${curSel('f_c',x.cur=='KRW'?'USD':x.cur,'exUi()')}</div>
+<label id=l_amt>금액<input id=f_a type=number inputmode=decimal value="${x.amt}"></label>
+<div id=r_krw><label>카드 청구 원화<input id=f_k type=number inputmode=decimal value="${x.krw||''}"></label></div>
+<div id=r_rt><label id=l_rt>환율<input id=f_rt type=number inputmode=decimal value="${r}"></label></div>
+<label>낸 사람<select id=f_p>${t.people.map(p=>`<option ${p==x.payer?'selected':''}>${esc(p)}</option>`).join('')}</select></label>
+<label>나눌 사람들</label>${t.people.map(p=>`<label class=chk><input type=checkbox name=sp value="${esc(p)}" ${sp.includes(p)||(x.custom&&x.custom[p])?'checked':''}>${esc(p)}</label>`).join('')}
+<label class=chk><input type=checkbox id=f_cu onchange=cuUi() ${x.custom?'checked':''}>사람별 금액 직접 입력</label>
+<div id=cu>${t.people.map((p,i)=>`<label>${esc(p)} 부담액 (원)<input id=c_${i} type=number inputmode=decimal value="${x.custom&&x.custom[p]||''}"></label>`).join('')}</div>`,()=>{
+const pay=val('f_pay'),o={id:x.id||uid(),date:val('f_d'),cat:val('f_cat'),memo:val('f_m').trim(),pay,cur:pay=='krw'?'KRW':getCur('f_c'),amt:+val('f_a'),krw:pay=='card'?+val('f_k'):0,payer:val('f_p')};
+o.rate=pay=='cash'&&+val('f_rt')?+val('f_rt')/(BIG.includes(o.cur)?100:1):0;
+if(!o.amt||!o.cur||(pay=='card'&&!o.krw)){alert('금액을 입력해 주세요');return false}
+if($('#f_cu').checked){o.custom={};t.people.forEach((p,i)=>{const v=+val('c_'+i);if(v)o.custom[p]=v});o.split=Object.keys(o.custom)}
+else{o.custom=null;o.split=[...document.querySelectorAll('[name=sp]:checked')].map(c=>c.value);if(!o.split.length){alert('나눌 사람을 선택해 주세요');return false}}
+if(id)Object.assign(x,o);else t.expenses.push(o);save()},id&&(()=>{t.expenses=t.expenses.filter(y=>y.id!=id);save()}));exUi();cuUi()}
+
+/* ---------- 설정 ---------- */
+function cfgForm(){openSheet('⚙ 동기화 설정',`<label>API Key (X-Master-Key)<input id=g_k value="${esc(cfg.key||'')}" autocomplete=off></label>
+<label>Bin ID (비우면 새로 생성)<input id=g_b value="${esc(cfg.bin||'')}" autocomplete=off></label><div class=hint id=stt>${esc(st)}</div>
+<div class=btns><button onclick="cfgSave();pull()">지금 불러오기</button><button onclick="cfgSave();push()">지금 올리기</button></div>`,()=>{cfgSave();push()})}
+function cfgSave(){cfg.key=val('g_k').trim();cfg.bin=val('g_b').trim();saveCfg()}
+
+/* ---------- 화면 ---------- */
+const IC=['<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>','<path d="M4 8h14l-3-3M20 16H6l3 3"/>','<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>','<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-6 6-6s6 2.5 6 6M16 5a3 3 0 0 1 0 6M18 14c2 .8 3 2.8 3 6"/>'];
+const NM=['요약','환전','지출','정산'],PAL=['#FF6FB7','#C9A227','#1B2A4A','#7BC6CC','#F4A261','#9B8AC4','#93A0B5'];
+const setTab=i=>{tab=i;render()};
+function render(){const t=T();
+$('#hd').innerHTML=`<select onchange="tripChg(this.value)">${S.trips.map(x=>`<option value="${x.id}" ${t&&x.id==t.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value=__new>＋ 새 여행</option></select>${t?'<button class=ib onclick="tripForm(T().id)">✎</button>':''}<button class=ib onclick=cfgForm()>⚙</button>`;
+$('#nv').innerHTML=NM.map((n,i)=>`<button class="${i==tab?'on':''}" onclick=setTab(${i})><svg viewBox="0 0 24 24">${IC[i]}</svg><span>${n}</span></button>`).join('');
+$('#fb').innerHTML=t&&(tab==1||tab==2)?`<button class=fab onclick="${tab==1?'exForm()':'xForm()'}">＋</button>`:'';
+if(chart){chart.destroy();chart=null}
+if(!t){$('#mn').innerHTML='<div class=empty>여행이 없어요<br>위 목록에서 “＋ 새 여행”을 눌러 주세요</div>';return}
+$('#mn').innerHTML=[vSum,vEx,vXp,vSet][tab](t);if(tab==0)drawChart(t)}
+const byDate=a=>[...a].sort((x,y)=>y.date.localeCompare(x.date));
+const tot=t=>t.expenses.reduce((s,x)=>s+Math.round(expKrw(t,x)),0);
+function vSum(t){const r=remain(t),cs=Object.keys(r);
+return `<div class=card><div class=hand>${esc(t.start)} ~ ${esc(t.end)} · ${t.people.length}명</div><div class=sub>총 지출</div><div class=big>${won(tot(t))}</div></div>
+<div class=card><h3>분류별</h3>${t.expenses.length?'<div style="max-width:240px;margin:0 auto"><canvas id=cv></canvas></div>':'<div class=empty>지출을 추가해 보세요</div>'}
+${CATS.map((c,i)=>{const s=t.expenses.filter(x=>x.cat==c).reduce((a,x)=>a+Math.round(expKrw(t,x)),0);return s?`<div class=row><div><span style="color:${PAL[i]}">●</span> ${c}</div><div class=num>${won(s)}</div></div>`:''}).join('')}</div>
+<div class=card><h3>남은 외화</h3>${cs.length?`<div class=chips>${cs.map(c=>`<div class=chip><div class=sub>${c}</div><div class="num ${r[c]<0?'neg':''}">${num(r[c])}</div></div>`).join('')}</div>`:'<div class=sub>환전 기록이 없어요</div>'}</div>`}
+function drawChart(t){const e=$('#cv');if(!e)return;const d=CATS.map(c=>t.expenses.filter(x=>x.cat==c).reduce((a,x)=>a+Math.round(expKrw(t,x)),0));
+chart=new Chart(e,{type:'doughnut',data:{labels:CATS,datasets:[{data:d,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},options:{cutout:'62%',plugins:{legend:{display:false}}}})}
+function vEx(t){const cs=[...new Set(t.exchanges.map(e=>e.cur))];
+return `<div class=card><h3>통화별 평균 환율</h3>${cs.length?cs.map(c=>`<div class=row><div>${c}</div><div class="num gold">${rs(c,avgRate(t,c))}</div></div>`).join(''):'<div class=sub>환전을 추가하면 평균 환율이 계산돼요</div>'}</div>
+<div class=card><h3>환전 기록</h3>${t.exchanges.length?byDate(t.exchanges).map(e=>`<div class=row onclick="exForm('${e.id}')"><div><div>${e.date.slice(5)} · ${esc(e.cur)}</div><div class=sub>${rs(e.cur,e.krw/e.fx)}</div></div><div class="r num"><div>${won(e.krw)}</div><div class=sub>→ ${num(e.fx)} ${esc(e.cur)}</div></div></div>`).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
+function vXp(t){return `<div class=card><h3>지출 기록</h3>${t.expenses.length?byDate(t.expenses).map(x=>{const k=Math.round(expKrw(t,x)),f=x.pay!='krw'&&x.cur!='KRW';return `<div class=row onclick="xForm('${x.id}')"><div><div><span class=tag>${x.cat}</span>${esc(x.memo)||'-'}</div><div class=sub>${x.date.slice(5)} · ${{cash:'현금',card:'카드',krw:'원화'}[x.pay]} · ${esc(x.payer)}</div></div><div class="r num"><div>${won(k)}</div>${f?`<div class=sub>${num(x.amt)} ${esc(x.cur)}</div>`:''}</div></div>`}).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
+function vSet(t){const s=settle(t);
+return `<div class=card><h3>송금 안내</h3>${s.tr.length?s.tr.map(a=>`<div class=row><div>${esc(a.from)} → ${esc(a.to)}</div><div class="num gold">${won(a.amt)}</div></div>`).join(''):'<div class=sub>정산할 금액이 없어요 🎉</div>'}</div>
+<div class=card><h3>사람별</h3>${Object.keys(s.bal).map(p=>`<div class=row><div>${esc(p)}<div class=sub>낸 돈 ${won(s.paid[p]||0)} · 부담 ${won(s.owed[p]||0)}</div></div><div class="num ${s.bal[p]>0?'pos':s.bal[p]<0?'neg':''}">${s.bal[p]>0?'+':''}${won(s.bal[p])}</div></div>`).join('')}<div class=sub style="margin-top:8px">+ 받을 돈 / − 보낼 돈</div></div>`}
+render();pull();
+</script></body></html>
