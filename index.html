@@ -54,12 +54,14 @@ nav button{flex:1;background:none;border:0;color:var(--ink3);display:flex;flex-d
 nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 nav button span{padding-bottom:2px;border-bottom:3px solid transparent}
 nav button.on{color:var(--ink)}nav button.on span{border-bottom-color:var(--pink)}
-.fab{position:fixed;right:var(--fab-right);bottom:calc(var(--tab-h) + var(--fab-bottom));width:var(--fab);height:var(--fab);border-radius:50%;border:0;background:var(--pink);color:#fff;font-size:32px;line-height:1;box-shadow:0 4px 14px rgba(255,111,183,.5);cursor:pointer;z-index:6}
+.fabs{position:fixed;right:var(--fab-right);bottom:calc(var(--tab-h) + var(--fab-bottom));display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:6}
+.fab{width:var(--fab);height:var(--fab);border-radius:50%;border:0;background:var(--pink);color:#fff;font-size:32px;line-height:1;box-shadow:0 4px 14px rgba(255,111,183,.5);cursor:pointer}
+.pill{height:40px;padding:0 16px;border-radius:99px;border:1.5px solid var(--pink);background:var(--card);color:var(--pink);font-weight:700;box-shadow:var(--shadow);cursor:pointer}
 @media(min-width:768px){
  nav{top:0;right:auto;width:var(--side-w);height:auto;flex-direction:column;justify-content:flex-start;gap:6px;padding-top:24px;border-top:0;border-right:1px solid var(--line)}
  nav button{flex:none;padding:14px 0}
  header,main{margin-left:var(--side-w)}main{margin:0 auto 0 calc(var(--side-w) + 24px);padding-bottom:100px}
- .fab{bottom:var(--fab-bottom)}
+ .fabs{bottom:var(--fab-bottom)}
 }
 #sh{position:fixed;inset:0;background:rgba(27,42,74,.4);z-index:20;display:none;align-items:flex-end;justify-content:center}
 #sh.on{display:flex}
@@ -184,11 +186,11 @@ const IC=['<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H
 const NM=['요약','환전','지출','정산'],PAL=['#FF6FB7','#C9A227','#1B2A4A','#7BC6CC','#F4A261','#9B8AC4','#93A0B5'];
 const setTab=i=>{tab=i;render()};
 function render(){const t=T();
-$('#hd').innerHTML=`<select onchange="tripChg(this.value)">${S.trips.map(x=>`<option value="${x.id}" ${t&&x.id==t.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value=__new>＋ 새 여행</option></select>${t?'<button class=ib onclick="tripForm(T().id)">✎</button>':''}<button class=ib onclick=cfgForm()>⚙</button>`;
+$('#hd').innerHTML=`<select onchange="tripChg(this.value)">${S.trips.map(x=>`<option value="${x.id}" ${t&&x.id==t.id?'selected':''}>${esc(x.name)}</option>`).join('')}${t?'':'<option>여행 없음</option>'}</select>${t?'<button class=ib onclick="tripForm(T().id)">✎</button>':''}<button class=ib onclick=cfgForm()>⚙</button>`;
 $('#nv').innerHTML=NM.map((n,i)=>`<button class="${i==tab?'on':''}" onclick=setTab(${i})><svg viewBox="0 0 24 24">${IC[i]}</svg><span>${n}</span></button>`).join('');
-$('#fb').innerHTML=t&&(tab==1||tab==2)?`<button class=fab onclick="${tab==1?'exForm()':'xForm()'}">＋</button>`:'';
+$('#fb').innerHTML='<div class=fabs><button class=pill onclick=tripForm()>＋ 새 여행</button>'+(t&&(tab==1||tab==2)?`<button class=fab onclick="${tab==1?'exForm()':'xForm()'}">＋</button>`:'')+'</div>';
 if(chart){chart.destroy();chart=null}
-if(!t){$('#mn').innerHTML='<div class=empty>여행이 없어요<br>위 목록에서 “＋ 새 여행”을 눌러 주세요</div>';return}
+if(!t){$('#mn').innerHTML='<div class=empty>여행이 없어요<br>오른쪽 아래 “＋ 새 여행”을 눌러 주세요</div>';return}
 $('#mn').innerHTML=[vSum,vEx,vXp,vSet][tab](t);if(tab==0)drawChart(t)}
 const byDate=a=>[...a].sort((x,y)=>y.date.localeCompare(x.date));
 const tot=t=>t.expenses.reduce((s,x)=>s+Math.round(expKrw(t,x)),0);
