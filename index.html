@@ -688,9 +688,9 @@ return `<div class=row onclick="xForm('${x.id}')" ${inBudget(x)?'':'style="opaci
    · val=[날짜,도시,동행자] 글씨 아래선(y)  · rowY=첫 내역 줄 y  · title=영수증 2의 큰 제목
    · 내역이 템플릿 칸보다 많으면 가운데(cut)를 늘려서 아래로 길어져요
 ============================================================ */
-const RC={font:"'Jua','Pretendard',sans-serif",ink:'#1B1B1B',rowH:50,cut:900,valX:395,rowX:185,amtX:850,totX:877,fSize:34,rSize:30,
+const RC={font:"'Jua','Pretendard',sans-serif",ink:'#1B1B1B',rowH:50,cut:900,valX:395,rowX:175,amtX:850,totX:877,fSize:34,rSize:30,
  1:{img:'receipt02.png',val:[431,492,553],rowY:778},
- 2:{img:'receipt03.png',val:[490,551,612],rowY:832,title:{x:115,y:350,size:112}}};
+ 2:{img:'receipt03.png',val:[485,546,607],rowY:832,title:{x:115,y:350,size:112}}};
 let rcTpl=1,rcOnly=true;const rcIm={};
 const rcItems=t=>t.expenses.filter(x=>inBudget(x)&&x.os!='done'&&(!rcOnly||isDutch(x))).sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
 function rcLoad(src){return rcIm[src]||(rcIm[src]=new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>{delete rcIm[src];no(new Error(src))};i.src=src}))}
