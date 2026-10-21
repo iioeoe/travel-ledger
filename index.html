@@ -170,8 +170,11 @@ nav button.on{color:var(--ink)}nav button.on span{border-bottom-color:var(--pink
 .box h3{margin:0 0 12px;font:var(--fs-title) var(--f-title)}
 .box label{display:block;font-size:13px;color:var(--ink2);margin-bottom:10px}
 .box input:not([type=checkbox]),.box select{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px}
-.chk{display:inline-block!important;margin:0 8px 8px 0!important;padding:6px 12px;background:#fff;border:1px solid var(--line);border-radius:99px;color:var(--ink)!important}
-.chk input{margin-right:4px}
+.chk{display:inline-flex!important;align-items:center;margin:0 8px 8px 0!important;padding:6px 12px;background:#fff;border:1px solid var(--line);border-radius:99px;color:var(--ink)!important}
+.chk.dt{font-weight:700;font-size:16px;padding:8px 16px}
+/* ★ 체크박스: 핑크 라운드 네모 (크기 24px, 모서리 8px, 색은 --pink) */
+.box input[type=checkbox]{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0 8px 0 0;border-radius:8px;border:1.5px solid #D8CFBC;background:#fff center/16px no-repeat;flex:0 0 auto}
+.box input[type=checkbox]:checked{background-color:var(--pink);border-color:var(--pink);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 .btns{display:flex;gap:8px;margin-top:14px}
 .btns button{flex:1;padding:12px;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
 .btns .ok{background:var(--pink);border-color:var(--pink);color:#fff}.btns .del{color:#D0436A;flex:0 0 80px}
@@ -545,12 +548,12 @@ const curChg=id=>$('#'+id+'_o').style.display=val(id)=='__'?'block':'none';
 const getCur=id=>val(id)=='__'?val(id+'_o').trim().toUpperCase():val(id);
 
 /* ---------- 날짜 입력 (연 4자리 → 월 → 일 자동 이동) ---------- */
-function dateIn(id,v){const[a,b,c]=(v||'').split('-');return `<div class=dt id=${id}><input data-k=y inputmode=numeric maxlength=4 placeholder=연도 value="${a||''}" oninput="dtAdv(this,4)" onfocus=this.select()><span>-</span><input data-k=m inputmode=numeric maxlength=2 placeholder=월 value="${b||''}" oninput="dtAdv(this,2)" onfocus=this.select()><span>-</span><input data-k=d inputmode=numeric maxlength=2 placeholder=일 value="${c||''}" oninput="dtAdv(this,2)" onfocus=this.select()></div>`}
+function dateIn(id,v){const[a,b,c]=(v||'').split('-');return `<div class=dt id=${id}><input data-k=y inputmode=numeric maxlength=4 placeholder=YYYY value="${a||''}" oninput="dtAdv(this,4)" onfocus=this.select()><span>-</span><input data-k=m inputmode=numeric maxlength=2 placeholder=MM value="${b||''}" oninput="dtAdv(this,2)" onfocus=this.select()><span>-</span><input data-k=d inputmode=numeric maxlength=2 placeholder=DD value="${c||''}" oninput="dtAdv(this,2)" onfocus=this.select()></div>`}
 function dtAdv(el,len){let v=el.value.replace(/\D/g,''),k=el.dataset.k;if(k=='m'&&v.length==1&&+v>1)v='0'+v;if(k=='d'&&v.length==1&&+v>3)v='0'+v;if(k=='h'&&v.length==1&&+v>2)v='0'+v;if(k=='n'&&v.length==1&&+v>5)v='0'+v;el.value=v;
 if(v.length>=len){const nx=el.parentNode.querySelector('[data-k='+({y:'m',m:'d',h:'n'}[k]||'x')+']');if(nx){nx.focus();nx.select()}}if($('#f_pay'))xPrev()}
 function dateVal(id){const g=k=>$('#'+id+' [data-k='+k+']').value,y=g('y'),m=g('m'),d=g('d');if(y.length!=4||!+m||!+d)return'';const t=new Date(+y,m-1,+d);if(t.getMonth()!=m-1||t.getDate()!=+d)return'';return y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0')}
 
-function timeIn(id,v){const[a,b]=(v||'').split(':');return `<div class=dt id=${id}><input data-k=h inputmode=numeric maxlength=2 placeholder=시 value="${a||''}" oninput="dtAdv(this,2)" onfocus=this.select()><span>:</span><input data-k=n inputmode=numeric maxlength=2 placeholder=분 value="${b||''}" oninput="dtAdv(this,2)" onfocus=this.select()></div>`}
+function timeIn(id,v){const[a,b]=(v||'').split(':');return `<div class=dt id=${id}><input data-k=h inputmode=numeric maxlength=2 placeholder=HH value="${a||''}" oninput="dtAdv(this,2)" onfocus=this.select()><span>:</span><input data-k=n inputmode=numeric maxlength=2 placeholder=mm value="${b||''}" oninput="dtAdv(this,2)" onfocus=this.select()></div>`}
 function timeVal(id){const g=k=>$('#'+id+' [data-k='+k+']').value,h=g('h'),n=g('n');if(!h&&!n)return'';if(!h||+h>23||(n&&+n>59))return null;return h.padStart(2,'0')+':'+(n||'0').padStart(2,'0')}
 
 /* ---------- 여행 (도장 목록 ↔ 여행 화면) ---------- */
@@ -591,19 +594,19 @@ const PAYS=[['cash','현금'],['tlog','카드(트래블로그)'],['twallet','카
 let xEditId=null;
 function fillPayer(p){const t=T(),s=$('#f_p'),cur=s.value,L=p=='other'?t.people.filter(z=>z!='나'):t.people;s.innerHTML=L.map(z=>`<option value="${esc(z)}">${esc(dn(z))}</option>`).join('');if(L.includes(cur))s.value=cur}
 function xUi(){const p=val('f_pay'),c=getCur('f_c'),w=p=='atm',k=p=='krw';
-$('#r_cur').style.display=k?'none':'block';$('#r_rt').style.display=k?'none':'block';$('#r_cat').style.display=w?'none':'block';const oo=p=='other',dd=oo&&val('f_os')=='done';$('#r_os').style.display=oo?'block':'none';$('#f_osh').textContent=oo?{later:'동행자에게 나중에 내 몫을 송금해요 (정산 탭에 표시)',mine:'내 몫을 내 환전(통장) 외화에서 차감해요 (이미 정산 끝)',done:'내 예산·정산에 넣지 않아요'}[val('f_os')]:'';fillPayer(p);$('#r_who').style.display=(w||dd)?'none':'block';
+$('#r_cur').style.display=k?'none':'block';$('#r_rt').style.display=k?'none':'block';$('#r_cat').style.display=w?'none':'block';const oo=p=='other',dd=oo&&val('f_os')=='done';$('#r_os').style.display=oo?'block':'none';$('#f_osh').textContent=oo?{later:'동행자에게 나중에 내 몫을 송금해요 (정산 탭에 표시)',mine:'내 몫을 내 환전(통장) 외화에서 차감해요 (이미 정산 끝)',done:'내 예산·정산에 넣지 않아요'}[val('f_os')]:'';fillPayer(p);$('#r_dt').style.display=(w||oo)?'none':'block';$('#r_who').style.display=(w||dd||(!oo&&!$('#f_dt').checked))?'none':'block';
 {const m=$('#f_m');if(w&&!m.value)m.value='ATM 인출';else if(!w&&m.value=='ATM 인출')m.value=''}
 $('#l_amt').firstChild.textContent=k?'금액 (원)':w?'인출 금액 (외화)':'금액 (외화)';
 $('#l_rt').firstChild.textContent=(BIG.includes(c)?'환율 (100'+c+'당 원)':'환율 (1'+c+'당 원)')+' - 비워 두면 자동';xPrev()}
 function xRead(id){const t=T(),pay=val('f_pay'),w=pay=='atm',o={id,date:dateVal('f_d'),time:timeVal('f_t'),pay,cur:pay=='krw'?'KRW':getCur('f_c'),amt:+val('f_a'),krw:0,cat:w?'':val('f_cat'),memo:val('f_m').trim()||(w?'ATM 인출':''),payer:w?t.people[0]:val('f_p'),os:pay=='other'?val('f_os'):''};
 o.rate=pay!='krw'&&+val('f_rt')?+val('f_rt')/(BIG.includes(o.cur)?100:1):0;
-if(w||(pay=='other'&&o.os=='done')){o.split=[];o.custom=null}else if($('#f_cu').checked){o.custom={};t.people.forEach((p,i)=>{const v=+val('c_'+i);if(v)o.custom[p]=v});o.split=Object.keys(o.custom)}
+if(w||(pay=='other'&&o.os=='done')){o.split=[];o.custom=null}else if(pay!='other'&&!$('#f_dt').checked){o.payer='나';o.split=['나'];o.custom=null}else if($('#f_cu').checked){o.custom={};t.people.forEach((p,i)=>{const v=+val('c_'+i);if(v)o.custom[p]=v});o.split=Object.keys(o.custom)}
 else{o.custom=null;o.split=[...document.querySelectorAll('[name=sp]:checked')].map(c=>c.value)}return o}
 function xPrev(){const e=$('#f_r');if(!e)return;const t=T(),o=xRead(xEditId||'__p');if(o.pay=='krw'||!o.amt||!o.cur||!o.date){e.textContent='';return}
 const b=calcAll({...t,expenses:[...t.expenses.filter(y=>y.id!=o.id),o]})[o.id];e.textContent=b.rate?'적용 환율 '+rs(o.cur,b.rate)+' → '+won(b.krw)+(b.over>0?'  ⚠ 보유 외화 초과분 포함':''):'⚠ 환전/인출 기록이 없어 환율을 계산할 수 없어요'}
 function cuUi(){$('#cu').style.display=$('#f_cu').checked?'block':'none'}
-function xForm(id){const t=T(),x=t.expenses.find(y=>y.id==id)||{date:today(),cat:'식비',memo:'',pay:'cash',cur:t.cur||'USD',amt:'',rate:'',payer:t.people[0],split:[...t.people],custom:null};
-const sp=x.split||[],r=x.rate?(BIG.includes(x.cur)?x.rate*100:x.rate):'',p0=x.pay=='card'?'tlog':x.pay;xEditId=id||null;
+function xForm(id){const t=T(),x=t.expenses.find(y=>y.id==id)||{date:today(),cat:'식비',memo:'',pay:'cash',cur:t.cur||'USD',amt:'',rate:'',payer:'나',split:['나'],custom:null};
+const sp=id?(x.split||[]):[...t.people],r=x.rate?(BIG.includes(x.cur)?x.rate*100:x.rate):'',p0=x.pay=='card'?'tlog':x.pay;xEditId=id||null;const dutchOn=!!(x.custom||(x.split||[]).length>1||(x.payer&&x.payer!='나'));
 openSheet(id?'지출 수정':'지출 추가',`<label>날짜${dateIn('f_d',x.date)}</label>
 <label>시간 (선택 · 비우면 그날 맨 뒤 순서)${timeIn('f_t',x.time)}</label>
 <label>결제수단<select id=f_pay onchange=xUi()>${PAYS.map(a=>`<option value=${a[0]} ${a[0]==p0?'selected':''}>${a[1]}</option>`).join('')}</select></label>
@@ -613,10 +616,11 @@ openSheet(id?'지출 수정':'지출 추가',`<label>날짜${dateIn('f_d',x.date
 <div id=r_cur>${curSel('f_c',x.cur=='KRW'?'USD':x.cur,'xUi()')}</div>
 <label id=l_amt>금액<input id=f_a type=number inputmode=decimal value="${x.amt}" oninput=xPrev()></label>
 <div id=r_rt><label id=l_rt>환율<input id=f_rt type=number inputmode=decimal value="${r}" oninput=xPrev()></label></div><div class=hint id=f_r></div>
-<div id=r_who><label>결제한 사람<select id=f_p>${t.people.map(p=>`<option value="${esc(p)}" ${p==x.payer?'selected':''}>${esc(dn(p))}</option>`).join('')}</select></label>
-<label>더치페이</label>${t.people.map(p=>`<label class=chk><input type=checkbox name=sp value="${esc(p)}" ${sp.includes(p)||(x.custom&&x.custom[p])?'checked':''}>${esc(dn(p))}</label>`).join('')}
+<div id=r_dt><label class="chk dt"><input type=checkbox id=f_dt onchange=xUi() ${dutchOn?'checked':''}>더치페이</label></div>
+<div id=r_who><label>함께 나눌 사람</label>${t.people.map(p=>`<label class=chk><input type=checkbox name=sp value="${esc(p)}" ${sp.includes(p)||(x.custom&&x.custom[p])?'checked':''}>${esc(dn(p))}</label>`).join('')}
 <label class=chk><input type=checkbox id=f_cu onchange=cuUi() ${x.custom?'checked':''}>사람별 금액 직접 입력</label>
-<div id=cu>${t.people.map((p,i)=>`<label>${esc(dn(p))} 부담액 (원)<input id=c_${i} type=number inputmode=decimal value="${x.custom&&x.custom[p]||''}"></label>`).join('')}</div></div>`,()=>{
+<div id=cu>${t.people.map((p,i)=>`<label>${esc(dn(p))} 부담액 (원)<input id=c_${i} type=number inputmode=decimal value="${x.custom&&x.custom[p]||''}"></label>`).join('')}</div>
+<label>결제한 사람<select id=f_p>${t.people.map(p=>`<option value="${esc(p)}" ${p==x.payer?'selected':''}>${esc(dn(p))}</option>`).join('')}</select></label></div>`,()=>{
 const o=xRead(x.id||uid());if(o.time===null){alert('시간을 확인해 주세요 (00~23시, 00~59분)');return false}
 if(!o.date||!o.amt||!o.cur){alert('날짜와 금액을 입력해 주세요');return false}
 if(o.pay=='other'&&!o.payer){alert('동행자를 먼저 추가해 주세요 (여행 ✎ 수정)');return false}
