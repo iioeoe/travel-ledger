@@ -708,7 +708,7 @@ its.forEach((x,i)=>{const y=C.rowY+i*RC.rowH,k=Math.round(by[x.id].krw),f=x.pay!
 const aw=tx(f?num(x.amt)+' '+x.cur:won(k),RC.amtX,y,RC.rSize,{a:'right',max:230});
 tx((x.cat?x.cat+' / ':'')+(x.memo||'-'),RC.rowX,y,RC.rSize,{max:RC.amtX-RC.rowX-aw-30})});
 if(!its.length)tx(rcOnly?'더치페이 건이 없어요':'내역이 없어요',RC.rowX,C.rowY,RC.rSize);
-tx(Object.keys(fx).map(c=>num(fx[c])+' '+c).join('  +  ')||'-',RC.totX,1203+ex,40,{a:'right',max:450});tx(won(krw),RC.totX,1292+ex,46,{a:'right',max:450});
+tx(Object.keys(fx).map(c=>num(fx[c])+' '+c).join('  +  ')||'-',RC.totX,1104+ex,40,{a:'right',max:450});tx(won(krw),RC.totX,1203+ex,46,{a:'right',max:450});
 img.src=cv.toDataURL('image/png');msg.textContent=''
 }catch(e){msg.textContent='영수증 배경 이미지('+C.img+')를 불러오지 못했어요. index.html과 같은 폴더에 올렸는지 확인해 주세요.'}}
 function rcCard(){return `<div class=card><h3>영수증</h3><div class=seg>${[1,2].map(n=>`<button class="${rcTpl==n?'on':''}" onclick="rcTpl=${n};render()">영수증 ${n}</button>`).join('')}</div><div class=seg><button class="${rcOnly?'on':''}" onclick="rcOnly=true;render()">더치페이 건만</button><button class="${rcOnly?'':'on'}" onclick="rcOnly=false;render()">전체</button></div><div id=rcMsg class=sub></div><img id=rcImg alt="정산 영수증" style="width:100%;display:block;border-radius:12px"><div class=seg style="margin-top:10px"><button class=go onclick=rcSave()>이미지 저장</button><button class=go onclick=rcShare()>공유</button></div></div>`}
