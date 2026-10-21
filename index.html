@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&family=Oswald:wght@500;700&family=Special+Elite&family=Roboto+Condensed:wght@400;700&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&family=Oswald:wght@500;700&family=Special+Elite&family=Roboto+Condensed:wght@400;700&family=Roboto+Slab:wght@700&family=Darumadrop+One&family=Dokdo&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 /* ★★★ 화면 축소 비율 (폴드 펼침 같은 넓은 터치 화면에서만 적용). 1이면 축소 안 함 ★★★ */
@@ -502,9 +502,10 @@ function renderStampList(trips,openFn){
 
 const $=s=>document.querySelector(s),val=id=>$('#'+id).value;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const won=n=>(n<0?'-':'')+'₩'+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+const CKO={KRW:'원',USD:'달러',JPY:'엔',EUR:'유로',CNY:'위안',THB:'바트',VND:'동',TWD:'대만달러',HKD:'홍콩달러',SGD:'싱가포르달러',GBP:'파운드',AUD:'호주달러',MOP:'파타카',MYR:'링깃',IDR:'루피아',PHP:'페소',KHR:'리엘',LAK:'킵',MMK:'챠트',INR:'루피',NPR:'네팔루피',LKR:'스리랑카루피',MVR:'루피야',AED:'디르함',QAR:'카타르리얄',SAR:'리얄',TRY:'리라',ILS:'셰켈',JOD:'디나르',KZT:'텡게',MNT:'투그릭',CHF:'프랑',CZK:'코루나',PLN:'즐로티',HUF:'포린트',DKK:'덴마크크로네',SEK:'스웨덴크로나',NOK:'노르웨이크로네',ISK:'아이슬란드크로나',RUB:'루블',RON:'레우',CAD:'캐나다달러',MXN:'멕시코페소',CUP:'쿠바페소',DOP:'도미니카페소',BRL:'헤알',ARS:'아르헨티나페소',CLP:'칠레페소',PEN:'솔',COP:'콜롬비아페소',EGP:'이집트파운드',MAD:'모로코디르함',ZAR:'랜드',KES:'케냐실링',TZS:'탄자니아실링',NZD:'뉴질랜드달러',FJD:'피지달러',XPF:'프랑'},cn=c=>CKO[c]||c;   // 통화코드 → 한글 통화명 (여기서 이름을 고칠 수 있어요)
+const won=n=>(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString('ko-KR')+'원';
 const num=n=>(+n).toLocaleString('ko-KR',{maximumFractionDigits:2});
-const rs=(c,r)=>BIG.includes(c)?'100'+c+' = ₩'+num(r*100):'1'+c+' = ₩'+num(r);
+const rs=(c,r)=>BIG.includes(c)?'100'+cn(c)+' = '+num(r*100)+'원':'1'+cn(c)+' = '+num(r)+'원';
 const uid=()=>Math.random().toString(36).slice(2,9),today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 let S=(()=>{try{const d=JSON.parse(localStorage.getItem('tripcost'));if(d&&d.trips)return d}catch(e){}return{ts:0,cur:null,trips:[]}})();
 let cfg=JSON.parse(localStorage.getItem('tripcost_cfg')||'{}'),tab=0,chart=null,st='',view='list';
@@ -610,7 +611,7 @@ $('#r_dt').style.display=(w||oo)?'none':'block';$('#r_who').style.display=dv?'bl
 $('#f_osh').textContent={later:me?'동행자가 나중에 나에게 보내요 (정산 탭에 표시)':'동행자에게 나중에 내 몫을 송금해요 (정산 탭에 표시)',mine:'내 몫을 내 환전(통장) 외화에서 차감해요 (이미 정산 끝)',done:oo?'내 예산·정산에 넣지 않아요':'동행자가 이미 갚았어요 (정산 탭에서 제외)'}[val('f_os')]||'';
 {const m=$('#f_m');if(w&&!m.value)m.value='ATM 인출';else if(!w&&m.value=='ATM 인출')m.value=''}
 $('#l_amt').firstChild.textContent=k?'금액 (원)':w?'인출 금액 (외화)':'금액 (외화)';
-$('#l_rt').firstChild.textContent=(BIG.includes(c)?'환율 (100'+c+'당 원)':'환율 (1'+c+'당 원)')+' - 비워 두면 자동';xPrev()}
+$('#l_rt').firstChild.textContent=(BIG.includes(c)?'환율 (100'+cn(c)+'당 원)':'환율 (1'+cn(c)+'당 원)')+' - 비워 두면 자동';xPrev()}
 function xRead(id){const t=T(),pay=val('f_pay'),w=pay=='atm',o={id,date:dateVal('f_d'),time:timeVal('f_t'),pay,cur:pay=='krw'?'KRW':getCur('f_c'),amt:+val('f_a'),krw:0,cat:w?'':val('f_cat'),memo:val('f_m').trim()||(w?'ATM 인출':''),payer:w?t.people[0]:val('f_p'),os:(!w&&(pay=='other'||$('#f_dt').checked))?val('f_os'):''};
 o.rate=pay!='krw'&&+val('f_rt')?+val('f_rt')/(BIG.includes(o.cur)?100:1):0;
 if(w||(pay=='other'&&o.os=='done')){o.split=[];o.custom=null}else if(pay!='other'&&!$('#f_dt').checked){o.payer='나';o.split=['나'];o.custom=null}else if($('#f_cu').checked){o.custom={};t.people.forEach((p,i)=>{const v=+val('c_'+i);if(v)o.custom[p]=v});o.split=Object.keys(o.custom)}
@@ -669,7 +670,7 @@ const byDate=a=>[...a].sort((x,y)=>sortKey(y).localeCompare(sortKey(x)));
 const tot=t=>{const b=calcAll(t);return t.expenses.filter(inBudget).reduce((s,x)=>s+Math.round(b[x.id].krw),0)};
 function balCard(t){const r=remain(t),cs=[...new Set([...Object.keys(r.ex),...Object.keys(r.cash)])];if(!cs.length)return'';
 const cell=(l,v)=>`<div class=r><div class=sub>${l}</div><div class="num ${v<0?'neg':''}">${num(v)}</div></div>`;
-return `<div class=card><h3>잔액</h3>${cs.map(c=>`<div class=row><div class=num>${esc(c)}</div>${cell('환전(통장) 잔액',r.ex[c]||0)}${cell('현금 잔액',r.cash[c]||0)}</div>`).join('')}</div>`}
+return `<div class=card><h3>잔액</h3>${cs.map(c=>`<div class=row><div class=num>${esc(cn(c))}</div>${cell('환전(통장) 잔액',r.ex[c]||0)}${cell('현금 잔액',r.cash[c]||0)}</div>`).join('')}</div>`}
 function vSum(t){const r=remain(t),by=calcAll(t),chip=(o,u)=>Object.keys(o).map(c=>`<div class=chip><div class=sub>${c}</div><div class="num ${o[c]<0?'neg':''}">${num(o[c])}</div></div>`).join('');
 return `<div class=card><div class=hand>${esc(t.start)} ~ ${esc(t.end)} · ${t.people.length}명 · ${t.rateMode=='avg'?'평균 환율':'환전 순서(FIFO)'}</div><div class=sub>총 지출</div><div class=big>${won(tot(t))}</div></div>
 <div class=card><h3>분류별</h3>${t.expenses.some(x=>x.cat&&inBudget(x))?'<div style="max-width:240px;margin:0 auto"><canvas id=cv></canvas></div>':'<div class=empty>지출을 추가해 보세요</div>'}
@@ -678,37 +679,60 @@ ${balCard(t)}`}
 function drawChart(t){const e=$('#cv');if(!e)return;const d=CATS.map(c=>t.expenses.filter(x=>x.cat==c&&inBudget(x)).reduce((a,x)=>a+Math.round(expKrw(t,x)),0));
 chart=new Chart(e,{type:'doughnut',data:{labels:CATS,datasets:[{data:d,backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},options:{cutout:'62%',plugins:{legend:{display:false}}}})}
 function vEx(t){const cs=[...new Set(t.exchanges.map(e=>e.cur))];
-return `${balCard(t)}<div class=card><h3>통화별 평균 환율</h3>${cs.length?cs.map(c=>`<div class=row><div>${c}</div><div class="num gold">${rs(c,avgRate(t,c))}</div></div>`).join(''):'<div class=sub>환전을 추가하면 평균 환율이 계산돼요</div>'}</div>
-<div class=card><h3>환전 기록</h3>${t.exchanges.length?byDate(t.exchanges).map(e=>`<div class=row onclick="exForm('${e.id}')"><div><div>${e.date.slice(5)}${e.time?' '+e.time:''} · ${esc(e.cur)}</div><div class=sub>${rs(e.cur,e.krw/e.fx)}</div></div><div class="r num"><div>${won(e.krw)}</div><div>→ ${num(e.fx)} ${esc(e.cur)}</div></div></div>`).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
+return `${balCard(t)}<div class=card><h3>통화별 평균 환율</h3>${cs.length?cs.map(c=>`<div class=row><div>${cn(c)}</div><div class="num gold">${rs(c,avgRate(t,c))}</div></div>`).join(''):'<div class=sub>환전을 추가하면 평균 환율이 계산돼요</div>'}</div>
+<div class=card><h3>환전 기록</h3>${t.exchanges.length?byDate(t.exchanges).map(e=>`<div class=row onclick="exForm('${e.id}')"><div><div>${e.date.slice(5)}${e.time?' '+e.time:''} · ${esc(cn(e.cur))}</div><div class=sub>${rs(e.cur,e.krw/e.fx)}</div></div><div class="r num"><div>${won(e.krw)}</div><div>→ ${num(e.fx)}${esc(cn(e.cur))}</div></div></div>`).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
 function vXp(t){const by=calcAll(t);return `${balCard(t)}<div class=card><h3>지출 기록</h3>${t.expenses.length?byDate(t.expenses).map(x=>{const b=by[x.id],k=Math.round(b.krw),f=x.pay!='krw'&&x.cur!='KRW',w=isWd(x);
-return `<div class=row onclick="xForm('${x.id}')" ${inBudget(x)?'':'style="opacity:.75"'}><div><div><span class=tag>${w?'인출':x.cat}</span>${esc(x.memo)||'-'}</div><div class=sub>${x.date.replace(/-/g,'.')} · ${PAYN[x.pay]}${isDutch(x)?' · '+esc(dn(x.payer)):''}</div></div><div class=rr><div class="r num"><div>${won(k)}</div>${f?`<div>${num(x.amt)} ${esc(x.cur)}</div><div class=sub>${rs(x.cur,b.rate)}${b.manual?' (직접)':''}${b.over>0?(x.pay=='cash'?' ⚠인출 현금 부족':' ⚠환전 외화 부족'):''}</div>`:''}${isDutch(x)?`<div class=sub>내 몫 ${won(shares(t,x,k)['나']||0)}</div>`:''}${inBudget(x)?'':'<div class=sub>지출 합계에는 미포함</div>'}</div><div class="dbg${isDutch(x)?' on':''}">${isDutch(x)?'더치<br>페이':''}</div></div></div>`}).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
+return `<div class=row onclick="xForm('${x.id}')" ${inBudget(x)?'':'style="opacity:.75"'}><div><div><span class=tag>${w?'인출':x.cat}</span>${esc(x.memo)||'-'}</div><div class=sub>${x.date.replace(/-/g,'.')} · ${PAYN[x.pay]}${isDutch(x)?' · '+esc(dn(x.payer)):''}</div></div><div class=rr><div class="r num"><div>${won(k)}</div>${f?`<div>${num(x.amt)}${esc(cn(x.cur))}</div><div class=sub>${rs(x.cur,b.rate)}${b.manual?' (직접)':''}${b.over>0?(x.pay=='cash'?' ⚠인출 현금 부족':' ⚠환전 외화 부족'):''}</div>`:''}${isDutch(x)?`<div class=sub>내 몫 ${won(shares(t,x,k)['나']||0)}</div>`:''}${inBudget(x)?'':'<div class=sub>지출 합계에는 미포함</div>'}</div><div class="dbg${isDutch(x)?' on':''}">${isDutch(x)?'더치<br>페이':''}</div></div></div>`}).join(''):'<div class=empty>아직 기록이 없어요</div>'}</div>`}
 /* ============================================================
    정산 영수증 (정산 탭) — receipt02.png / receipt03.png 위에 글씨를 그려요
    ★ 좌표는 템플릿(1024×1536) 기준 픽셀이에요. 글씨 위치·크기는 아래 RC 에서 고치세요
    · val=[날짜,도시,동행자] 글씨 아래선(y)  · rowY=첫 내역 줄 y  · title=영수증 2의 큰 제목
    · 내역이 템플릿 칸보다 많으면 가운데(cut)를 늘려서 아래로 길어져요
 ============================================================ */
-const RC={font:"'Gaegu','Jua','Pretendard',sans-serif",ink:'#1B1B1B',rowH:50,cut:900,valX:395,rowX:185,amtX:850,totX:877,fSize:34,rSize:30,
+const RC={font:"'Gaegu','Jua','Pretendard',sans-serif",bold:700,titleFont:"'Darumadrop One','Dokdo','Jua',sans-serif",   // 글꼴: 영수증 글씨=Gaegu 굵게 / 영수증 2 큰 제목=영문 Darumadrop One + 한글 Dokdo
+ ink:'#1B1B1B',rowH:50,cut:900,cut2:1330,valX:395,rowX:175,amtX:850,totX:877,fSize:34,rSize:30,
+ totY1:1141,totS1:34,totY2:1203,totS2:46,   // TOTAL 오른쪽 두 줄(누가 얼마 / 받을 돈·보낼 돈): 높이 y · 글씨 크기
+ stampW:360,stampQ:260,stampY:1262,          // 스탬프 가로 크기(넓은 모양 / 정사각형 모양) · 스탬프 위쪽 y
  1:{img:'receipt02.png',val:[431,492,553],rowY:778},
  2:{img:'receipt03.png',val:[485,546,607],rowY:832,title:{x:115,y:350,size:112}}};
 let rcTpl=1,rcOnly=true;const rcIm={};
 const rcItems=t=>t.expenses.filter(x=>inBudget(x)&&x.os!='done'&&(!rcOnly||isDutch(x))).sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
-function rcLoad(src){return rcIm[src]||(rcIm[src]=new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>{delete rcIm[src];no(new Error(src))};i.src=src}))}
+const rcImgFrom=src=>new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error(src));i.src=src});
+function rcLoad(src){return rcIm[src]||(rcIm[src]=rcImgFrom(src).catch(e=>{delete rcIm[src];throw e}))}
+/* 요약(도장 목록)과 같은 스탬프: SVG에서 글씨만 빼서 그림으로 만들고, 글씨는 같은 좌표·글꼴·색으로 캔버스에 다시 써요 */
+async function rcStampPrep(t){const h=hashStr(String(t.id)),v=h%6,color=STAMP_COLORS[(h>>3)%STAMP_COLORS.length],rot=(h%9)-4;
+try{const sv=new DOMParser().parseFromString(stampSVG(v,t).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" '),'image/svg+xml').documentElement;if(sv.nodeName!='svg')throw 0;
+const vb=sv.getAttribute('viewBox').split(' ').map(Number),txs=[...sv.querySelectorAll('text')].map(e=>({s:e.textContent,x:+e.getAttribute('x'),y:+e.getAttribute('y'),z:+e.getAttribute('font-size'),a:e.getAttribute('text-anchor'),f:e.getAttribute('font-family'),b:e.getAttribute('font-weight'),ls:e.getAttribute('letter-spacing'),tl:e.getAttribute('textLength')}));
+sv.querySelectorAll('text').forEach(e=>e.remove());sv.setAttribute('width',vb[2]);sv.setAttribute('height',vb[3]);
+const sw=[0,3,4,5].includes(v)?RC.stampW:RC.stampQ,sc=sw/vb[2],url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(sv).replace(/currentColor/g,color).replace(/#F4F1EA/g,'#FDFAF4'));
+await Promise.all(['400 20px "Roboto Condensed"','700 20px "Roboto Condensed"','700 20px "Oswald"','700 20px "Roboto Slab"','400 20px "Special Elite"','20px Jua'].map(f=>document.fonts.load(f,txs.map(z=>z.s).join('')+'가')));
+return{img:await rcImgFrom(url),txs,color,rot,sw,sc,sh:vb[3]*sc}}catch(e){return null}}
+function rcStampDraw(g,S,cx,top){g.save();g.translate(cx,top+S.sh/2);g.rotate(S.rot*Math.PI/180);g.drawImage(S.img,-S.sw/2,-S.sh/2,S.sw,S.sh);
+g.translate(-S.sw/2,-S.sh/2);g.scale(S.sc,S.sc);g.fillStyle=S.color;g.textBaseline='alphabetic';
+S.txs.forEach(o=>{g.font=`${o.b} ${o.z}px ${o.f}`;g.textAlign=o.a=='middle'?'center':o.a=='end'?'end':'start';if('letterSpacing' in g)g.letterSpacing=(o.ls||0)+'px';
+const w=g.measureText(o.s).width;g.save();g.translate(o.x,o.y);if(o.tl&&w)g.scale(o.tl/w,1);g.fillText(o.s,0,0);g.restore()});g.restore()}
 async function drawReceipt(t){const C=RC[rcTpl],img=$('#rcImg'),msg=$('#rcMsg');if(!img)return;
-try{await document.fonts.load('32px Jua');const im=await rcLoad(C.img);
-const by=calcAll(t),its=rcItems(t),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,W=1024,H=1536+ex;
+try{const its=rcItems(t),all=its.map(x=>(x.cat||'')+(x.memo||'')+cn(x.cur)).join('')+t.city+t.people.map(dn).join('')+settle(t).tr.map(a=>dn(a.from)+dn(a.to)).join('')+'받을 돈 보낼 돈 정산할 없음 더치페이 건이 내역이 요 ~.,/→·0123456789';
+await Promise.all([document.fonts.load('700 32px Gaegu',all),document.fonts.load('40px "Darumadrop One"',t.city),document.fonts.load('40px Dokdo',t.city)]);const im=await rcLoad(C.img),S=await rcStampPrep(t);
+const by=calcAll(t),sl=settle(t),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex2=S?Math.max(0,Math.round(RC.stampY+S.sh+30-1425)):0,W=1024,H=1536+ex+ex2;
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
-g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(im,0,0,W,RC.cut,0,0,W,RC.cut);if(ex)g.drawImage(im,0,RC.cut,W,1,0,RC.cut,W,ex);g.drawImage(im,0,RC.cut,W,1536-RC.cut,0,RC.cut+ex,W,1536-RC.cut);
-const tx=(s,x,y,sz,o)=>{o=o||{};s=String(s);g.font=sz+'px '+RC.font;const w=g.measureText(s).width;if(o.max&&w>o.max){sz=Math.floor(sz*o.max/w);g.font=sz+'px '+RC.font}g.textAlign=o.a||'left';g.fillStyle=RC.ink;g.fillText(s,x,y);return Math.min(w,o.max||w)};
+g.fillStyle='#fff';g.fillRect(0,0,W,H);
+g.drawImage(im,0,0,W,RC.cut,0,0,W,RC.cut);if(ex)g.drawImage(im,0,RC.cut,W,1,0,RC.cut,W,ex);
+g.drawImage(im,0,RC.cut,W,RC.cut2-RC.cut,0,RC.cut+ex,W,RC.cut2-RC.cut);if(ex2)g.drawImage(im,0,RC.cut2,W,1,0,RC.cut2+ex,W,ex2);
+g.drawImage(im,0,RC.cut2,W,1536-RC.cut2,0,RC.cut2+ex+ex2,W,1536-RC.cut2);
+const tx=(s,x,y,sz,o)=>{o=o||{};s=String(s);const fm=()=>(o.w||RC.bold)+' '+sz+'px '+(o.f||RC.font);g.font=fm();const w=g.measureText(s).width;if(o.max&&w>o.max){sz=Math.floor(sz*o.max/w);g.font=fm()}g.textAlign=o.a||'left';g.fillStyle=RC.ink;g.fillText(s,x,y);return Math.min(w,o.max||w)};
 const d=s=>String(s).replace(/-/g,'.');
-if(C.title)tx(t.city,C.title.x,C.title.y,C.title.size,{max:800});
+if(C.title)tx(t.city,C.title.x,C.title.y,C.title.size,{max:800,f:RC.titleFont,w:400});
 tx(d(t.start)+' ~ '+d(t.end),RC.valX,C.val[0],RC.fSize,{max:540});tx(t.city,RC.valX,C.val[1],RC.fSize,{max:540});tx(t.people.map(dn).join(', '),RC.valX,C.val[2],RC.fSize,{max:540});
-const fx={};let krw=0;
-its.forEach((x,i)=>{const y=C.rowY+i*RC.rowH,k=Math.round(by[x.id].krw),f=x.pay!='krw'&&x.cur!='KRW';krw+=k;if(f)fx[x.cur]=(fx[x.cur]||0)+ +x.amt;
-const aw=tx(f?num(x.amt)+' '+x.cur:won(k),RC.amtX,y,RC.rSize,{a:'right',max:230});
+its.forEach((x,i)=>{const y=C.rowY+i*RC.rowH,k=Math.round(by[x.id].krw),f=x.pay!='krw'&&x.cur!='KRW';
+const aw=tx(f?num(x.amt)+cn(x.cur):won(k),RC.amtX,y,RC.rSize,{a:'right',max:230});
 tx((x.cat?x.cat+' / ':'')+(x.memo||'-'),RC.rowX,y,RC.rSize,{max:RC.amtX-RC.rowX-aw-30})});
 if(!its.length)tx(rcOnly?'더치페이 건이 없어요':'내역이 없어요',RC.rowX,C.rowY,RC.rSize);
-tx(Object.keys(fx).map(c=>num(fx[c])+' '+c).join('  +  ')||'-',RC.totX,1141+ex,40,{a:'right',max:450});tx(won(krw),RC.totX,1203+ex,46,{a:'right',max:450});
+/* TOTAL = 정산 결과(내 기준): 위 줄은 누구와 얼마, 아래 줄은 받을 돈 / 보낼 돈 */
+const inn=sl.tr.filter(a=>a.to=='나'),out=sl.tr.filter(a=>a.from=='나'),rv=inn.reduce((s,a)=>s+a.amt,0),sd=out.reduce((s,a)=>s+a.amt,0);
+tx(inn.map(a=>dn(a.from)+' '+won(a.amt)).concat(out.map(a=>'→ '+dn(a.to)+' '+won(a.amt))).join('  ·  '),RC.totX,RC.totY1+ex,RC.totS1,{a:'right',max:450});
+tx((rv?'받을 돈 '+won(rv):'')+(rv&&sd?'  /  ':'')+(sd?'보낼 돈 '+won(sd):'')||'정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
+if(S)rcStampDraw(g,S,W/2,RC.stampY+ex);
 img.src=cv.toDataURL('image/png');msg.textContent=''
 }catch(e){msg.textContent='영수증 배경 이미지('+C.img+')를 불러오지 못했어요. index.html과 같은 폴더에 올렸는지 확인해 주세요.'}}
 function rcCard(){return `<div class=card><h3>영수증</h3><div class=seg>${[1,2].map(n=>`<button class="${rcTpl==n?'on':''}" onclick="rcTpl=${n};render()">영수증 ${n}</button>`).join('')}</div><div class=seg><button class="${rcOnly?'on':''}" onclick="rcOnly=true;render()">더치페이 건만</button><button class="${rcOnly?'':'on'}" onclick="rcOnly=false;render()">전체</button></div><div id=rcMsg class=sub></div><img id=rcImg alt="정산 영수증" style="width:100%;display:block;border-radius:12px"><div class=seg style="margin-top:10px"><button class=go onclick=rcSave()>이미지 저장</button><button class=go onclick=rcShare()>공유</button></div></div>`}
