@@ -129,6 +129,7 @@ a{color:inherit;}
 /* 탭바 · + 버튼 */
 --tab-h:60px;--side-w:92px;--fab:56px;--fab-right:18px;--fab-bottom:16px;
 --dbg-size:38px;--dbg-font:11px;
+--mc-name:12px;--mc-num:13px;--mc-sub:12px;   /* 요약 환전·현금·카드 카드: 이름·원화·외화 글씨 크기 */
 }
 /* ───────── 아래는 일반 스타일 ───────── */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -200,6 +201,13 @@ header.topbar{position:sticky;top:0;z-index:8}
 .seg button{flex:1;padding:10px;border-radius:99px;border:1.5px solid var(--line);background:#fff;font-weight:700;color:var(--ink2)}
 .seg button.on{background:var(--pink);border-color:var(--pink);color:#fff}
 .seg button.go{background:var(--ink);border-color:var(--ink);color:#fff}
+/* ★ 요약 탭 환전/현금 결제/카드 결제 카드 */
+.mcs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:var(--gap)}
+.mc{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 10px;min-width:0}
+.mc svg{width:28px;height:28px;fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block}
+.mc .mn{font-size:var(--mc-name);color:var(--ink2);margin:6px 0 2px}
+.mc .mk{font-size:var(--mc-num);font-weight:700;overflow-wrap:anywhere}
+.mc .mf{font-size:var(--mc-sub);margin-top:2px;overflow-wrap:anywhere}
 </style></head>
 <body>
 <header class="topbar" id="tb">
@@ -654,7 +662,7 @@ function cfgSave(){cfg.key=val('g_k').trim();cfg.bin=val('g_b').trim();saveCfg()
 
 /* ---------- 화면 ---------- */
 const IC=['<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>','<path d="M4 8h14l-3-3M20 16H6l3 3"/>','<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>','<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-6 6-6s6 2.5 6 6M16 5a3 3 0 0 1 0 6M18 14c2 .8 3 2.8 3 6"/>'];
-const NM=['요약','환전','지출','정산'],PAL=['#FF6FB7','#C9A227','#1B2A4A','#7BC6CC','#F4A261','#9B8AC4','#93A0B5'];
+const NM=['요약','환전','지출','정산'],PAL=['#D99AAF','#91B8D9','#9DBDA7','#E8CC7A','#B4A5D4','#E9B49E','#BDBDC7']   /* ★ 분류별 그래프 색 (항공·숙박·식비·교통·쇼핑·입장료·기타 순서) */;
 const setTab=i=>{tab=i;render()};
 function render(){
 $('#topStat').textContent=S.trips.length;
@@ -671,11 +679,22 @@ $('#fb').innerHTML=(tab==1||tab==2)?`<div class=fabs><button class=fab onclick="
 $('#mn').innerHTML=[vSum,vEx,vXp,vSet][tab](t);if(tab==0)drawChart(t);if(tab==3)drawReceipt(t)}
 const byDate=a=>[...a].sort((x,y)=>sortKey(y).localeCompare(sortKey(x)));
 const tot=t=>{const b=calcAll(t);return t.expenses.filter(inBudget).reduce((s,x)=>s+Math.round(b[x.id].krw),0)};
+const MIC={ex:'<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M8 7v13M16 7v13"/>',
+cash:'<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/><path d="M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/>',
+card:'<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10.5h18M7 15h4"/>'};
+// 요약 카드: 환전(환전한 총액) / 현금 결제 합계 / 카드(트래블로그·월렛) 결제 합계 — 줄: 아이콘 · 이름 · 원화 · 외화
+function sumCards(t){const by=calcAll(t),fxs=o=>Object.keys(o).map(c=>num(o[c])+cn(c)).join(' + ')||'-',
+box=(ic,nm,krw,fx)=>`<div class=mc><svg viewBox="0 0 24 24">${MIC[ic]}</svg><div class=mn>${nm}</div><div class="num mk">${won(krw)}</div><div class="sub mf">${fxs(fx)}</div></div>`,
+sum=f=>{let k=0;const fx={};t.expenses.filter(f).forEach(x=>{k+=by[x.id].krw;fx[x.cur]=(fx[x.cur]||0)+ +x.amt});return[k,fx]};
+let ek=0;const ef={};t.exchanges.forEach(e=>{ek+=+e.krw;ef[e.cur]=(ef[e.cur]||0)+ +e.fx});
+const c=sum(x=>x.pay=='cash'),d=sum(x=>x.pay=='tlog'||x.pay=='twallet'||x.pay=='card');
+return `<div class=mcs>${box('ex','환전',ek,ef)}${box('cash','현금 결제',c[0],c[1])}${box('card','카드 결제',d[0],d[1])}</div>`}
 function balCard(t){const r=remain(t),cs=[...new Set([...Object.keys(r.ex),...Object.keys(r.cash)])];if(!cs.length)return'';
 const cell=(l,v)=>`<div class=r><div class=sub>${l}</div><div class="num ${v<0?'neg':''}">${num(v)}</div></div>`;
 return `<div class=card><h3>잔액</h3>${cs.map(c=>`<div class=row><div class=num>${esc(cl(c))}</div>${cell('환전(통장) 잔액',r.ex[c]||0)}${cell('현금 잔액',r.cash[c]||0)}</div>`).join('')}</div>`}
 function vSum(t){const r=remain(t),by=calcAll(t),chip=(o,u)=>Object.keys(o).map(c=>`<div class=chip><div class=sub>${c}</div><div class="num ${o[c]<0?'neg':''}">${num(o[c])}</div></div>`).join('');
 return `<div class=card><div class=hand>${esc(t.start)} ~ ${esc(t.end)} · ${t.people.length}명 · ${t.rateMode=='avg'?'평균 환율':'환전 순서(FIFO)'}</div><div class=sub>총 지출</div><div class=big>${won(tot(t))}</div></div>
+${sumCards(t)}
 <div class=card><h3>분류별</h3>${t.expenses.some(x=>x.cat&&inBudget(x))?'<div style="max-width:240px;margin:0 auto"><canvas id=cv></canvas></div>':'<div class=empty>지출을 추가해 보세요</div>'}
 ${CATS.map((c,i)=>{const s=t.expenses.filter(x=>x.cat==c&&inBudget(x)).reduce((a,x)=>a+Math.round(by[x.id].krw),0);return s?`<div class=row><div><span style="color:${PAL[i]}">●</span> ${c}</div><div class=num>${won(s)}</div></div>`:''}).join('')}</div>
 ${balCard(t)}`}
