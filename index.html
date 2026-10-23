@@ -290,8 +290,8 @@ t.expenses.forEach(x=>{const c=x.cur,a=+x.amt;if(x.pay=='tlog'||x.pay=='twallet'
 // 정산 금액을 "엔 · 원"으로 같이 보여주기: 지출이 외화 한 종류일 때 그 지출들의 평균 환율(원/외화)로 환산
 function fxCtx(t,items){const by=calcAll(t),cs=new Set();let k=0,a=0;items.forEach(x=>{if(x.pay!='krw'&&x.cur!='KRW'){cs.add(x.cur);k+=by[x.id].krw;a+=+x.amt}});const cur=cs.size==1?[...cs][0]:null;return{cur,reff:cur&&a?k/a:0}}
 const dual=(cx,krw)=>cx.cur&&cx.reff?num(Math.round(krw/cx.reff))+cn(cx.cur)+' · '+won(krw):won(krw);
-function settle(t){const by=calcAll(t),paid={},owed={};t.people.forEach(p=>paid[p]=owed[p]=0);
-t.expenses.filter(x=>inBudget(x)&&x.os!='done').forEach(x=>{const k=Math.round(by[x.id].krw),sh=shares(t,x,k);paid[x.payer]=(paid[x.payer]||0)+k;for(const p in sh)owed[p]=(owed[p]||0)+sh[p];
+function settle(t,items){const by=calcAll(t),paid={},owed={};t.people.forEach(p=>paid[p]=owed[p]=0);
+(items||t.expenses.filter(x=>inBudget(x)&&x.os!='done')).forEach(x=>{const k=Math.round(by[x.id].krw),sh=shares(t,x,k);paid[x.payer]=(paid[x.payer]||0)+k;for(const p in sh)owed[p]=(owed[p]||0)+sh[p];
  if(x.pay=='other'&&x.os=='mine'){const s=sh['나']||0;paid['나']=(paid['나']||0)+s;paid[x.payer]-=s}});   // 내 외화로 이미 갚은 내 몫은 정산에서 빼기
 const bal={};[...new Set([...Object.keys(paid),...Object.keys(owed)])].forEach(p=>bal[p]=Math.round((paid[p]||0)-(owed[p]||0)));
 const cr=[],db=[];for(const p in bal){if(bal[p]>0)cr.push([p,bal[p]]);else if(bal[p]<0)db.push([p,-bal[p]])}
@@ -299,8 +299,8 @@ cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);const tr=[];let i=0,j=0;
 while(i<cr.length&&j<db.length){const m=Math.min(cr[i][1],db[j][1]);if(m>0)tr.push({from:db[j][0],to:cr[i][0],amt:m});cr[i][1]-=m;db[j][1]-=m;if(!cr[i][1])i++;if(!db[j][1])j++}
 return{bal,paid,owed,tr}}
 // 정산(외화 한 종류일 때): 엔 단위로 정산하고, 원화는 그 지출들의 평균 환율로 환산 / 외화가 여러 종류면 원화로만 정산
-function settle2(t){const sc=t.expenses.filter(x=>inBudget(x)&&x.os!='done'),cx=fxCtx(t,sc);if(!cx.cur||!cx.reff)return{...settle(t),cur:null,fx:null};
-const by=calcAll(t),sk=settle(t),r=cx.reff,R2=v=>Math.round(v*100)/100,paid={},owed={},rd=p=>{const f=Math.abs(bal[p]),k=Math.abs(sk.bal[p]||0);return f>0&&k>0?k/f:r};   // 원화는 지출마다 입력·계산된 환율(직접 입력 포함)로 계산한 값(sk)을 써요t.people.forEach(p=>paid[p]=owed[p]=0);
+function settle2(t,items){const sc=items||t.expenses.filter(x=>inBudget(x)&&x.os!='done'),cx=fxCtx(t,sc);if(!cx.cur||!cx.reff)return{...settle(t,sc),cur:null,fx:null};
+const by=calcAll(t),sk=settle(t,sc),r=cx.reff,R2=v=>Math.round(v*100)/100,paid={},owed={},rd=p=>{const f=Math.abs(bal[p]),k=Math.abs(sk.bal[p]||0);return f>0&&k>0?k/f:r};   // 원화는 지출마다 입력·계산된 환율(직접 입력 포함)로 계산한 값(sk)을 써요t.people.forEach(p=>paid[p]=owed[p]=0);
 sc.forEach(x=>{const tot=(x.pay!='krw'&&x.cur!='KRW')?+x.amt:by[x.id].krw/r,f=fracs(x);paid[x.payer]=(paid[x.payer]||0)+tot;for(const p in f)owed[p]=(owed[p]||0)+tot*f[p];
 if(x.pay=='other'&&x.os=='mine'){const s=tot*(f['나']||0);paid['나']=(paid['나']||0)+s;paid[x.payer]=(paid[x.payer]||0)-s}});
 const bal={};[...new Set([...Object.keys(paid),...Object.keys(owed)])].forEach(p=>bal[p]=R2((paid[p]||0)-(owed[p]||0)));
@@ -309,6 +309,15 @@ cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);const tr=[];let i=0,j=0;
 while(i<cr.length&&j<db.length){const m=R2(Math.min(cr[i][1],db[j][1]));if(m>0)tr.push({from:db[j][0],to:cr[i][0],fx:m,amt:Math.round(m*rd(db[j][0]))});cr[i][1]=R2(cr[i][1]-m);db[j][1]=R2(db[j][1]-m);if(cr[i][1]<=0)i++;if(db[j][1]<=0)j++}
 const K=o=>{const q={};for(const p in o)q[p]=Math.round(o[p]*r);return q},Q=o=>{const q={};for(const p in o)q[p]=R2(o[p]);return q};
 return{bal:sk.bal,paid:sk.paid,owed:sk.owed,tr,cur:cx.cur,reff:r,fx:{bal,paid:Q(paid),owed:Q(owed)}}}
+// 원화 잔액 → 송금 짝짓기 (큰 받을 사람 ↔ 큰 보낼 사람)
+function pairUp(bal){const cr=[],db=[];for(const p in bal){if(bal[p]>0)cr.push([p,bal[p]]);else if(bal[p]<0)db.push([p,-bal[p]])}
+cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);const tr=[];let i=0,j=0;
+while(i<cr.length&&j<db.length){const m=Math.min(cr[i][1],db[j][1]);if(m>0)tr.push({from:db[j][0],to:cr[i][0],amt:m});cr[i][1]-=m;db[j][1]-=m;if(!cr[i][1])i++;if(!db[j][1])j++}return tr}
+/* ★ 정산 = 외화로 결제한 건(외화 정산: 엔·원) + 원화로 결제한 건(원화 정산: 원만). 둘 다 있으면 합계(원화)도 계산 */
+function settleAll(t){const sc=t.expenses.filter(x=>inBudget(x)&&x.os!='done'),isK=x=>x.pay=='krw'||x.cur=='KRW',fi=sc.filter(x=>!isK(x)),ki=sc.filter(isK),
+fx=fi.length?settle2(t,fi):null,kr=ki.length?settle(t,ki):null;let tot=null;
+if(fx&&kr){const b={};[...Object.keys(fx.bal),...Object.keys(kr.bal)].forEach(p=>b[p]=(fx.bal[p]||0)+(kr.bal[p]||0));tot={bal:b,tr:pairUp(b)}}
+return{fx,kr,tot}}
 /* ============ (CALC-END) ============ */
 /* ============================================================
   [E] 나라 데이터 + 영문 나라 이름 (TRAVEL LEDGER KIT 그대로)
@@ -642,6 +651,7 @@ const dn=p=>p=='나'?'me':p;   // 화면에는 '나' 대신 'me'로 표시 (저�
 const PAYS=[['cash','현금'],['tlog','카드(트래블로그)'],['twallet','카드(트래블월렛)'],['atm','ATM기 (현금 인출)'],['other','Other Payer'],['krw','원화']];
 let xEditId=null;
 function fillPayer(p){const t=T(),s=$('#f_p'),cur=s.value,L=p=='other'?t.people.filter(z=>z!='나'):t.people;s.innerHTML=L.map(z=>`<option value="${esc(z)}">${esc(dn(z))}</option>`).join('');if(L.includes(cur))s.value=cur}
+function catChg(){if(val('f_cat')=='항공'&&val('f_pay')!='krw'){$('#f_pay').value='krw';xUi()}}   // 항공은 원화 결제가 기본 (바꿀 수 있어요)
 function fillOs(p){const s=$('#f_os'),cur=s.value,me=!val('f_p')||val('f_p')=='나',ks=me||p=='krw'?['later','done']:['later','mine','done'];s.innerHTML=ks.map(k=>`<option value=${k}>${OSN[k]}</option>`).join('');s.value=ks.includes(cur)?cur:'later'}
 function xUi(){const p=val('f_pay'),c=getCur('f_c'),w=p=='atm',k=p=='krw';
 $('#r_cur').style.display=k?'none':'block';$('#r_rt').style.display=k?'none':'block';$('#r_cat').style.display=(w&&!$('#f_dt').checked)?'none':'block';const oo=p=='other';fillPayer(p);fillOs(p);const dd=oo&&val('f_os')=='done',dv=oo||$('#f_dt').checked,me=val('f_p')=='나';
@@ -662,7 +672,7 @@ const sp=id?(x.split||[]):[...t.people],r=x.rate?(BIG.includes(x.cur)?x.rate*100
 openSheet(id?'지출 수정':'지출 추가',`<label>날짜${dateIn('f_d',x.date)}</label>
 <label>시간 (선택 · 비우면 그날 맨 뒤 순서)${timeIn('f_t',x.time)}</label>
 <label>결제수단<select id=f_pay onchange=xUi()>${PAYS.map(a=>`<option value=${a[0]} ${a[0]==p0?'selected':''}>${a[1]}</option>`).join('')}</select></label>
-<div id=r_cat><label>분류<select id=f_cat>${CATS.map(c=>`<option ${c==x.cat?'selected':''}>${c}</option>`).join('')}</select></label></div>
+<div id=r_cat><label>분류<select id=f_cat onchange=catChg()>${CATS.map(c=>`<option ${c==x.cat?'selected':''}>${c}</option>`).join('')}</select></label></div>
 <label>내용<input id=f_m value="${esc(x.memo)}" placeholder="예: 라멘"></label>
 <div id=r_cur>${curSel('f_c',x.cur=='KRW'?'USD':x.cur,'xUi()')}</div>
 <label id=l_amt>금액<input id=f_a type=number inputmode=decimal value="${x.amt}" oninput=xPrev()></label>
@@ -760,10 +770,14 @@ function rcStampDraw(g,S,cx,top){g.save();g.translate(cx,top+S.sh/2);g.rotate(S.
 g.translate(-S.sw/2,-S.sh/2);g.scale(S.sc,S.sc);g.fillStyle=S.color;g.textBaseline='alphabetic';
 S.txs.forEach(o=>{g.font=`${o.b} ${o.z}px ${o.f}`;g.textAlign=o.a=='middle'?'center':o.a=='end'?'end':'start';if('letterSpacing' in g)g.letterSpacing=(o.ls||0)+'px';
 const w=g.measureText(o.s).width;g.save();g.translate(o.x,o.y);if(o.tl&&w)g.scale(o.tl/w,1);g.fillText(o.s,0,0);g.restore()});g.restore()}
+function rcLines(A){const L=[],both=!!(A.fx&&A.kr),ln=(a,x,pre)=>L.push((pre?[[pre+' ',RC.totName,RC.light]]:[]).concat([[dn(a.from),RC.totName,RC.light],['▶',RC.totArrow,RC.light],[dn(a.to),RC.totName,RC.light],['  '+x,RC.totS2]]));
+if(A.fx)A.fx.tr.forEach(a=>ln(a,(a.fx!=null&&A.fx.cur?numf(a.fx)+cn(A.fx.cur)+' · ':'')+won(a.amt),both?'외화':''));
+if(A.kr)A.kr.tr.forEach(a=>ln(a,won(a.amt),both?'원화':''));
+if(both)A.tot.tr.forEach(a=>ln(a,won(a.amt),'합계'));return L}
 async function drawReceipt(t){const C=RC[rcTpl],img=$('#rcImg'),msg=$('#rcMsg');if(!img)return;
 try{const its=rcItems(t),all=its.map(x=>(x.cat||'')+(x.memo||'')+cn(x.cur)).join('')+t.city+t.people.map(dn).join('')+settle(t).tr.map(a=>dn(a.from)+dn(a.to)).join('')+'받을 돈 보낼 돈 정산할 없음 더치페이 건이 내역이 요 ~.,/→·0123456789';
 await Promise.all([document.fonts.load('700 32px Gaegu',all),document.fonts.load('40px "Darumadrop One"',t.city),document.fonts.load('40px Dokdo',t.city)]);const im=await rcLoad(C.img),S=await rcStampPrep(t);
-const by=calcAll(t),sl=settle2(t),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex3=Math.max(0,sl.tr.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex3+S.sh+30-1425)):0,W=1024,H=1536+ex+ex2;
+const by=calcAll(t),sl=settleAll(t),TL=rcLines(sl),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex3=Math.max(0,TL.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex3+S.sh+30-1425)):0,W=1024,H=1536+ex+ex2;
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
 g.fillStyle='#fff';g.fillRect(0,0,W,H);
 g.drawImage(im,0,0,W,RC.cut,0,0,W,RC.cut);if(ex)g.drawImage(im,0,RC.cut,W,1,0,RC.cut,W,ex);
@@ -782,8 +796,7 @@ const pf={};its.forEach(x=>{const c=(x.pay=='krw'||x.cur=='KRW')?'KRW':x.cur;pf[
 tx(Object.keys(pf).map(p=>dn(p)+' '+Object.keys(pf[p]).map(c=>num(pf[p][c])+cn(c)).join(' + ')).join('  |  '),RC.totX,RC.totY1+ex,RC.totS1,{a:'right',max:450});
 const rich=(segs,x,y,max)=>{const fm=(s,k)=>{g.font=(s[3]||RC.bold)+' '+Math.max(8,Math.floor(s[1]*k))+'px '+RC.font},ms=k=>segs.reduce((w,s)=>{fm(s,k);return w+g.measureText(s[0]).width},0),w0=ms(1),k=w0>max?max/w0:1;let xx=x-ms(k);
 segs.forEach(s=>{fm(s,k);g.textAlign='left';g.fillStyle=s[2]||RC.ink;g.fillText(s[0],xx,y);xx+=g.measureText(s[0]).width})};
-if(sl.tr.length)sl.tr.forEach((a,i)=>rich([[dn(a.from),RC.totName,RC.light],['▶',RC.totArrow,RC.light],[dn(a.to),RC.totName,RC.light],['  '+(a.fx!=null?numf(a.fx)+cn(sl.cur)+' · ':'')+won(a.amt),RC.totS2]],RC.totX,RC.totY2+ex+i*RC.totGap,450));
-else tx('정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
+if(TL.length)TL.forEach((sg,i)=>rich(sg,RC.totX,RC.totY2+ex+i*RC.totGap,450));else tx('정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
 if(S)rcStampDraw(g,S,W/2,RC.stampY+ex+ex3);
 img.src=cv.toDataURL('image/png');msg.textContent=''
 }catch(e){msg.textContent='영수증 배경 이미지('+C.img+')를 불러오지 못했어요. index.html과 같은 폴더에 올렸는지 확인해 주세요.'}}
@@ -791,9 +804,16 @@ function rcCard(){return `<div class=card><h3>영수증</h3><div class=seg>${[1,
 function rcSave(){const i=$('#rcImg');if(!i||!i.src)return;const a=document.createElement('a');a.href=i.src;a.download='정산영수증_'+(T().city||'trip')+'.png';a.click()}
 async function rcShare(){const i=$('#rcImg');if(!i||!i.src)return;try{const b=await(await fetch(i.src)).blob(),f=new File([b],'정산영수증.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'정산 영수증'});else rcSave()}catch(e){}}
 
-function vSet(t){const s=settle2(t),F=(k,p)=>s.fx?(s.fx[k][p]||0):null,D=(f,n)=>f==null?won(n):numf(f)+cn(s.cur)+' · '+won(n);
-return `${rcCard()}<div class=card><h3>송금 안내</h3>${s.tr.length?s.tr.map(a=>`<div class=row><div>${esc(dn(a.from))} → ${esc(dn(a.to))}</div><div class="num gold">${D(a.fx,a.amt)}</div></div>`).join(''):'<div class=sub>정산할 금액이 없어요 🎉</div>'}</div>
-<div class=card><h3>사람별</h3>${Object.keys(s.bal).map(p=>`<div class=pp><div class=pph><div>${esc(dn(p))}</div><div class="num ${s.bal[p]>0?'pos':s.bal[p]<0?'neg':''}">${s.bal[p]>0?'+':''}${D(F('bal',p),s.bal[p])}</div></div><div class=sub>낸 돈 ${D(F('paid',p),s.paid[p]||0)}</div><div class=sub>부담 ${D(F('owed',p),s.owed[p]||0)}</div></div>`).join('')}<div class=sub style="margin-top:8px">+ 받을 돈 / − 보낼 돈</div></div>`}
+function vSet(t){const A=settleAll(t),both=!!(A.fx&&A.kr),g=(s,k,q)=>s&&s.fx?(s.fx[k][q]||0):null,
+D=(s,f,n)=>f==null||!s.cur?won(n):numf(f)+cn(s.cur)+' · '+won(n),V=(s,k,q)=>D(s,g(s,k,q),s[k][q]||0),
+tr=(a,x)=>`<div class=row><div>${esc(dn(a.from))} → ${esc(dn(a.to))}</div><div class="num gold">${x}</div></div>`,
+sec=(ti,r)=>r.length?(both?`<div class=sub style="margin:6px 0 2px">${ti}</div>`:'')+r.join(''):'',
+fxR=A.fx?A.fx.tr.map(a=>tr(a,D(A.fx,a.fx,a.amt))):[],krR=A.kr?A.kr.tr.map(a=>tr(a,won(a.amt))):[],totR=A.tot?A.tot.tr.map(a=>tr(a,won(a.amt))):[],
+ppl=[...new Set([...Object.keys(A.fx?A.fx.bal:{}),...Object.keys(A.kr?A.kr.bal:{})])];
+return `${rcCard()}<div class=card><h3>송금 안내</h3>${fxR.length+krR.length?sec('외화 정산',fxR)+sec('원화 정산',krR)+(both&&totR.length?`<div class=sub style="margin:6px 0 2px">합계 (원화)</div>`+totR.join(''):''):'<div class=sub>정산할 금액이 없어요 🎉</div>'}</div>
+<div class=card><h3>사람별</h3>${ppl.map(q=>{const b=both?A.tot.bal[q]||0:(A.fx?A.fx.bal[q]:A.kr.bal[q])||0,bt=both?won(b):A.fx?V(A.fx,'bal',q):won(b),
+ln=k=>[A.fx?V(A.fx,k,q):null,A.kr?(both?'원화 ':'')+won(A.kr[k][q]||0):null].filter(Boolean).join('  +  ');
+return `<div class=pp><div class=pph><div>${esc(dn(q))}</div><div class="num ${b>0?'pos':b<0?'neg':''}">${b>0?'+':''}${bt}</div></div><div class=sub>낸 돈 ${ln('paid')}</div><div class=sub>부담 ${ln('owed')}</div></div>`}).join('')}<div class=sub style="margin-top:8px">+ 받을 돈 / − 보낼 돈${both?' (합계는 원화 기준)':''}</div></div>`}
 fixTrips();$('#syncBtn').onclick=cfgForm;
 history.replaceState({v:'list'},'');
 addEventListener('popstate',e=>{const pv=view;$('#sh').classList.remove('on');view=e.state&&e.state.v=='detail'?'detail':'list';render();if(pv!=view)scrollTo(0,0)});
