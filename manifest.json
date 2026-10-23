@@ -1,1 +1,17 @@
-{"name":"Travel Pocki","short_name":"Travel Pocki","start_url":".","scope":".","display":"standalone","background_color":"#FFFAF2","theme_color":"#FFFAF2","icons":[{"src":"icon.png","sizes":"835x835","type":"image/png","purpose":"any maskable"}]}
+{
+  "name":"Travel Pocki",
+  "short_name":"Travel Pocki",
+  "start_url":".",
+  "scope":".",
+  "display":"standalone",
+  "background_color":"#FFFAF2",
+  "theme_color":"#FFFAF2",
+  "icons":[
+    {
+      "src":"icon.png",
+      "sizes":"835x835",
+      "type":"image/png",
+      "purpose":"any maskable"
+    }
+  ]
+}
