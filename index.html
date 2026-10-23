@@ -749,7 +749,7 @@ return `<div class=row onclick="xForm('${x.id}')" ${inBudget(x)?'':'style="opaci
    · 내역이 템플릿 칸보다 많으면 가운데(cut)를 늘려서 아래로 길어져요
 ============================================================ */
 const RC={font:"'Gaegu','Jua','Pretendard',sans-serif",bold:700,titleFont:"'Darumadrop One','Dokdo','Jua',sans-serif",   // 글꼴: 영수증 글씨=Gaegu 굵게 / 영수증 2 큰 제목=영문 Darumadrop One + 한글 Dokdo
- ink:'#1B1B1B',rowH:50,cut:900,cut2:1330,valX:395,rowX:135,amtX:850,totX:877,fSize:47,rSize:40,
+ ink:'#1B1B1B',rowH:50,cut:900,cut2:1330,cut3:1095,valX:395,rowX:135,amtX:850,totX:877,fSize:47,rSize:40,
  totY1:1141,totS1:43,totY2:1203,totS2:46,totGap:62,totName:30,totArrow:20,light:'#9A9A9A',   // TOTAL 오른쪽 두 줄(누가 얼마 / 받을 돈·보낼 돈): 높이 y · 글씨 크기
  stampW:360,stampQ:260,stampY:1262,          // 스탬프 가로 크기(넓은 모양 / 정사각형 모양) · 스탬프 위쪽 y
  1:{img:'receipt02.png',val:[431,492,553],rowY:778},
@@ -777,12 +777,13 @@ if(both)A.tot.tr.forEach(a=>ln(a,won(a.amt),'합계'));return L}
 async function drawReceipt(t){const C=RC[rcTpl],img=$('#rcImg'),msg=$('#rcMsg');if(!img)return;
 try{const its=rcItems(t),all=its.map(x=>(x.cat||'')+(x.memo||'')+cn(x.cur)).join('')+t.city+t.people.map(dn).join('')+settle(t).tr.map(a=>dn(a.from)+dn(a.to)).join('')+'받을 돈 보낼 돈 정산할 없음 더치페이 건이 내역이 요 ~.,/→·0123456789';
 await Promise.all([document.fonts.load('700 32px Gaegu',all),document.fonts.load('40px "Darumadrop One"',t.city),document.fonts.load('40px Dokdo',t.city)]);const im=await rcLoad(C.img),S=await rcStampPrep(t);
-const by=calcAll(t),sl=settleAll(t),TL=rcLines(sl),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex3=Math.max(0,TL.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex3+S.sh+30-1425)):0,W=1024,H=1536+ex+ex2;
+const by=calcAll(t),sl=settleAll(t),TL=rcLines(sl),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex4=Math.max(0,TL.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex4+S.sh+30-1425)):0,W=1024,H=1536+ex+ex4+ex2;
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
 g.fillStyle='#fff';g.fillRect(0,0,W,H);
 g.drawImage(im,0,0,W,RC.cut,0,0,W,RC.cut);if(ex)g.drawImage(im,0,RC.cut,W,1,0,RC.cut,W,ex);
-g.drawImage(im,0,RC.cut,W,RC.cut2-RC.cut,0,RC.cut+ex,W,RC.cut2-RC.cut);if(ex2)g.drawImage(im,0,RC.cut2,W,1,0,RC.cut2+ex,W,ex2);
-g.drawImage(im,0,RC.cut2,W,1536-RC.cut2,0,RC.cut2+ex+ex2,W,1536-RC.cut2);
+g.drawImage(im,0,RC.cut,W,RC.cut3-RC.cut,0,RC.cut+ex,W,RC.cut3-RC.cut);if(ex4)g.drawImage(im,0,RC.cut3,W,1,0,RC.cut3+ex,W,ex4);   // 점선~TOTAL 사이를 늘려서 정산 줄이 전부 실선 위에 오게
+g.drawImage(im,0,RC.cut3,W,RC.cut2-RC.cut3,0,RC.cut3+ex+ex4,W,RC.cut2-RC.cut3);if(ex2)g.drawImage(im,0,RC.cut2,W,1,0,RC.cut2+ex+ex4,W,ex2);
+g.drawImage(im,0,RC.cut2,W,1536-RC.cut2,0,RC.cut2+ex+ex4+ex2,W,1536-RC.cut2);
 const tx=(s,x,y,sz,o)=>{o=o||{};s=String(s);const fm=()=>(o.w||RC.bold)+' '+sz+'px '+(o.f||RC.font);g.font=fm();const w=g.measureText(s).width;if(o.max&&w>o.max){sz=Math.floor(sz*o.max/w);g.font=fm()}g.textAlign=o.a||'left';g.fillStyle=RC.ink;g.fillText(s,x,y);return Math.min(w,o.max||w)};
 const d=s=>String(s).replace(/-/g,'.');
 if(C.title)tx(t.city,C.title.x,C.title.y,C.title.size,{max:800,f:RC.titleFont,w:400,a:'center'});
@@ -797,7 +798,7 @@ tx(Object.keys(pf).map(p=>dn(p)+' '+Object.keys(pf[p]).map(c=>num(pf[p][c])+cn(c
 const rich=(segs,x,y,max)=>{const fm=(s,k)=>{g.font=(s[3]||RC.bold)+' '+Math.max(8,Math.floor(s[1]*k))+'px '+RC.font},ms=k=>segs.reduce((w,s)=>{fm(s,k);return w+g.measureText(s[0]).width},0),w0=ms(1),k=w0>max?max/w0:1;let xx=x-ms(k);
 segs.forEach(s=>{fm(s,k);g.textAlign='left';g.fillStyle=s[2]||RC.ink;g.fillText(s[0],xx,y);xx+=g.measureText(s[0]).width})};
 if(TL.length)TL.forEach((sg,i)=>rich(sg,RC.totX,RC.totY2+ex+i*RC.totGap,450));else tx('정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
-if(S)rcStampDraw(g,S,W/2,RC.stampY+ex+ex3);
+if(S)rcStampDraw(g,S,W/2,RC.stampY+ex+ex4);
 img.src=cv.toDataURL('image/png');msg.textContent=''
 }catch(e){msg.textContent='영수증 배경 이미지('+C.img+')를 불러오지 못했어요. index.html과 같은 폴더에 올렸는지 확인해 주세요.'}}
 function rcCard(){return `<div class=card><h3>영수증</h3><div class=seg>${[1,2].map(n=>`<button class="${rcTpl==n?'on':''}" onclick="rcTpl=${n};render()">영수증 ${n}</button>`).join('')}</div><div class=seg><button class="${rcOnly?'on':''}" onclick="rcOnly=true;render()">더치페이 건만</button><button class="${rcOnly?'':'on'}" onclick="rcOnly=false;render()">전체</button></div><div id=rcMsg class=sub></div><img id=rcImg alt="정산 영수증" style="width:100%;display:block;border-radius:12px"><div class=seg style="margin-top:10px"><button class=go onclick=rcSave()>이미지 저장</button><button class=go onclick=rcShare()>공유</button></div></div>`}
