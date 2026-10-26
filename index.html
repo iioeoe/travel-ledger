@@ -749,7 +749,8 @@ return `<div class=row onclick="xForm('${x.id}')" ${inBudget(x)?'':'style="opaci
    · 내역이 템플릿 칸보다 많으면 가운데(cut)를 늘려서 아래로 길어져요
 ============================================================ */
 const RC={font:"'Gaegu','Jua','Pretendard',sans-serif",bold:700,titleFont:"'Darumadrop One','Dokdo','Jua',sans-serif",   // 글꼴: 영수증 글씨=Gaegu 굵게 / 영수증 2 큰 제목=영문 Darumadrop One + 한글 Dokdo
- ink:'#1B1B1B',rowH:50,cut:900,cut2:1330,cut3:1095,valX:395,rowX:135,amtX:850,totX:877,fSize:47,rSize:40,
+ ink:'#1B1B1B',rowH:50,cut:900,cut2:1330,cut3:1095,krFirst:false,   // krFirst: false=외화 건 먼저, true=원화 건 먼저 (둘 사이를 한 줄 띄워요)
+ valX:395,rowX:135,amtX:850,totX:877,fSize:47,rSize:40,
  totY1:1141,totS1:43,totY2:1203,totS2:46,totGap:62,totName:30,totArrow:20,light:'#9A9A9A',   // TOTAL 오른쪽 두 줄(누가 얼마 / 받을 돈·보낼 돈): 높이 y · 글씨 크기
  stampW:360,stampQ:260,stampY:1262,          // 스탬프 가로 크기(넓은 모양 / 정사각형 모양) · 스탬프 위쪽 y
  1:{img:'receipt02.png',val:[431,492,553],rowY:778},
@@ -777,7 +778,8 @@ if(both)A.tot.tr.forEach(a=>ln(a,won(a.amt),'합계'));return L}
 async function drawReceipt(t){const C=RC[rcTpl],img=$('#rcImg'),msg=$('#rcMsg');if(!img)return;
 try{const its=rcItems(t),all=its.map(x=>(x.cat||'')+(x.memo||'')+cn(x.cur)).join('')+t.city+t.people.map(dn).join('')+settle(t).tr.map(a=>dn(a.from)+dn(a.to)).join('')+'받을 돈 보낼 돈 정산할 없음 더치페이 건이 내역이 요 ~.,/→·0123456789';
 await Promise.all([document.fonts.load('700 32px Gaegu',all),document.fonts.load('40px "Darumadrop One"',t.city),document.fonts.load('40px Dokdo',t.city)]);const im=await rcLoad(C.img),S=await rcStampPrep(t);
-const by=calcAll(t),sl=settleAll(t),TL=rcLines(sl),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,its.length-cap)*RC.rowH,ex4=Math.max(0,TL.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex4+S.sh+30-1425)):0,W=1024,H=1536+ex+ex4+ex2;
+const isK=x=>x.pay=='krw'||x.cur=='KRW',gA=its.filter(x=>RC.krFirst?isK(x):!isK(x)),gB=its.filter(x=>RC.krFirst?!isK(x):isK(x)),rows=gA.concat(gA.length&&gB.length?[null]:[],gB);
+const by=calcAll(t),sl=settleAll(t),TL=rcLines(sl),cap=Math.floor((1040-C.rowY)/RC.rowH)+1,ex=Math.max(0,rows.length-cap)*RC.rowH,ex4=Math.max(0,TL.length-1)*RC.totGap,ex2=S?Math.max(0,Math.round(RC.stampY+ex4+S.sh+30-1425)):0,W=1024,H=1536+ex+ex4+ex2;
 const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
 g.fillStyle='#fff';g.fillRect(0,0,W,H);
 g.drawImage(im,0,0,W,RC.cut,0,0,W,RC.cut);if(ex)g.drawImage(im,0,RC.cut,W,1,0,RC.cut,W,ex);
@@ -788,16 +790,17 @@ const tx=(s,x,y,sz,o)=>{o=o||{};s=String(s);const fm=()=>(o.w||RC.bold)+' '+sz+'
 const d=s=>String(s).replace(/-/g,'.');
 if(C.title)tx(t.city,C.title.x,C.title.y,C.title.size,{max:800,f:RC.titleFont,w:400,a:'center'});
 tx(d(t.start)+' ~ '+d(t.end),RC.valX,C.val[0],RC.fSize,{max:540});tx(t.city,RC.valX,C.val[1],RC.fSize,{max:540});tx(t.people.map(dn).join(', '),RC.valX,C.val[2],RC.fSize,{max:540});
-its.forEach((x,i)=>{const y=C.rowY+i*RC.rowH,k=Math.round(by[x.id].krw),f=x.pay!='krw'&&x.cur!='KRW';
+rows.forEach((x,i)=>{if(!x)return;const y=C.rowY+i*RC.rowH,k=Math.round(by[x.id].krw),f=x.pay!='krw'&&x.cur!='KRW';
 const aw=tx(f?num(x.amt)+cn(x.cur):won(k),RC.amtX,y,RC.rSize,{a:'right',max:230});
 tx((rcOnly?dn(x.payer)+' / ':(x.cat?x.cat+' / ':''))+(x.memo||'-'),RC.rowX,y,RC.rSize,{max:RC.amtX-RC.rowX-aw-30})});
 if(!its.length)tx(rcOnly?'더치페이 건이 없어요':'내역이 없어요',RC.rowX,C.rowY,RC.rSize);
 /* TOTAL 첫줄: 사람별로 낸 금액 / 둘째줄~: 누가▶누구 금액 (외화 · 원, 이름·화살표는 작고 연하게) */
 const pf={};its.forEach(x=>{const c=(x.pay=='krw'||x.cur=='KRW')?'KRW':x.cur;pf[x.payer]=pf[x.payer]||{};pf[x.payer][c]=(pf[x.payer][c]||0)+ +x.amt});
 tx(Object.keys(pf).map(p=>dn(p)+' '+Object.keys(pf[p]).map(c=>num(pf[p][c])+cn(c)).join(' + ')).join('  |  '),RC.totX,RC.totY1+ex,RC.totS1,{a:'right',max:450});
-const rich=(segs,x,y,max)=>{const fm=(s,k)=>{g.font=(s[3]||RC.bold)+' '+Math.max(8,Math.floor(s[1]*k))+'px '+RC.font},ms=k=>segs.reduce((w,s)=>{fm(s,k);return w+g.measureText(s[0]).width},0),w0=ms(1),k=w0>max?max/w0:1;let xx=x-ms(k);
+const rich=(segs,x,y,max,kk)=>{const fm=(s,k)=>{g.font=(s[3]||RC.bold)+' '+Math.max(8,Math.floor(s[1]*k))+'px '+RC.font},ms=k=>segs.reduce((w,s)=>{fm(s,k);return w+g.measureText(s[0]).width},0),w0=ms(1),k=kk||(w0>max?max/w0:1);let xx=x-ms(k);
 segs.forEach(s=>{fm(s,k);g.textAlign='left';g.fillStyle=s[2]||RC.ink;g.fillText(s[0],xx,y);xx+=g.measureText(s[0]).width})};
-if(TL.length)TL.forEach((sg,i)=>rich(sg,RC.totX,RC.totY2+ex+i*RC.totGap,450));else tx('정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
+const KK=TL.length?Math.min(1,...TL.map(sg=>450/sg.reduce((w,s)=>{g.font=(s[3]||RC.bold)+' '+s[1]+'px '+RC.font;return w+g.measureText(s[0]).width},0))):1;   // 모든 정산 줄에 같은 축소 비율 → 글씨 크기 동일
+if(TL.length)TL.forEach((sg,i)=>rich(sg,RC.totX,RC.totY2+ex+i*RC.totGap,450,KK));else tx('정산할 돈 없음',RC.totX,RC.totY2+ex,RC.totS2,{a:'right',max:450});
 if(S)rcStampDraw(g,S,W/2,RC.stampY+ex+ex4);
 img.src=cv.toDataURL('image/png');msg.textContent=''
 }catch(e){msg.textContent='영수증 배경 이미지('+C.img+')를 불러오지 못했어요. index.html과 같은 폴더에 올렸는지 확인해 주세요.'}}
